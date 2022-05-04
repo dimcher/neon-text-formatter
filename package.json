@@ -1,0 +1,15 @@
+{
+  "name": "neon",
+  "version": "0.1.0",
+  "description": "",
+  "main": "lib/index.js",
+  "author": "Dima Chernyshev <dimcher@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "neon-cli": "^0.10.0",
+    "pkg": "^5.6.0"
+  },
+  "scripts": {
+    "install": "neon build"
+  }
+}
