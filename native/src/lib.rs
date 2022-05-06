@@ -1,32 +1,125 @@
 use neon::prelude::*;
 
-use std::fs::File;
-use std::io::{Read, Write, Result};
+use regex::Regex;
 
-fn vec_string(vec: &Vec<char>) -> String {
+use std::{fs::File, io::{Read, Write}, {collections::HashMap}};
+
+const COMMA: char = ',';
+const QUOTE: char = '"';
+
+struct Extensions {}
+
+impl Extensions {
+    fn new() -> HashMap<&'static str, char> {
+        let mut map = HashMap::new();
+
+        map.insert("csv", ',');
+        map.insert("tsv", '\t');
+        map.insert("psv", '|');
+
+        map
+    }
+}
+
+fn minmax(word: &str) -> [char; 2] {
+    let w: Vec<char> = word.chars().collect();
+
+    [w[0], w[w.len()-1]]
+}
+
+fn file_type(file: &String) -> String {
+    let re = Regex::new(r"[^\.]+$").unwrap();
+    let mat = re.find(&file).unwrap();
+    
+    file[mat.start()..mat.end()].to_string()
+}
+
+fn file_delim(mode: &str, map: &HashMap<&str, char>) -> char {
+    *map.get(mode).unwrap_or(&COMMA)
+}
+
+fn vec_string<'a, 'b>(vec: &Vec<char>) -> String {
     vec.iter().cloned().collect::<String>()
 }
 
-fn read_file(filename: String) -> Result<String> {
-    let mut file = File::open(filename)?;
+fn read_file<'a>(file: &String) -> Box<String> {
+    let mut file = File::open(file).unwrap();
     let mut contents = String::new();
 
-    file.read_to_string(&mut contents)?;
+    file.read_to_string(&mut contents).unwrap();
 
-    Ok(contents)
+    Box::new(contents)
 }
 
-fn write_file(filename: String, context: &str) -> Result<usize> {
-    let mut file = File::create(filename)?;
-    let text = context.as_bytes();
-    file.write_all(text)?;
+fn write_file(file: String, text: &str) -> usize {
+    let mut file = File::create(file).unwrap();
+    let data = text.as_bytes();
+    file.write_all(data).unwrap();
 
-    Ok(context.len())
+    text.len()
+}
+
+fn auto_trim (mut text: String, beg: bool, end: bool) -> Box<String> {
+    let len: usize = text.len();
+
+    if len > 1 {
+        if beg {
+            text.remove(0);
+        }
+        if end {
+            text.pop();
+        }
+    }
+
+    Box::new(text)
+}
+
+fn parse_csv_2(text: &str) -> Box<Vec<Vec<String>>> {
+    let mut data: Vec<Vec<String>> = Vec::new();
+    let mut line: Vec<String> = Vec::new();
+    let mut word: Vec<char> = Vec::new();
+
+    let lines = text.lines().enumerate();
+
+    for (_li, ln) in lines {
+        let parts = ln.split(COMMA).enumerate();
+        let mut words: Vec<String> = Vec::new();
+
+        let mut append: String = String::from("");
+
+        for (_wi, wd) in parts {
+            let [min, max]: [char; 2] = minmax(wd);
+            let beg: bool = min == QUOTE;
+            let end: bool = max == QUOTE;
+
+            if append.len() > 0 {
+                append.push_str(wd);
+                
+                if end {
+                    append = *auto_trim(append, true, true);
+                    words.push(append);
+                    append = String::new();
+                }
+
+                continue;
+            }
+
+            if beg && !end {
+                append = *auto_trim(String::from(wd), beg, end);
+                continue;
+            }
+
+            words.push(*auto_trim(String::from(wd), beg, end));
+        }
+        
+        data.push(words);
+    }
+
+    Box::new(data)
 }
 
 fn parse_csv(text: &str) -> Vec<Vec<String>> {
-    const DCHAR: char = 'a';
-    const COMMA: char = ',';
+    const DCHAR: char = '_';
     const QUOTE: char = '"';
 
     let mut data: Vec<Vec<String>> = Vec::new();
@@ -124,39 +217,29 @@ fn parse_csv(text: &str) -> Vec<Vec<String>> {
         line.clear();
 
     }
-//    println!("= {:?}", data);
     data
 }
 
-fn format_text(data: &Vec<Vec<String>>, delim: String) -> String {
+fn format_text(data: &Vec<Vec<String>>, delim: char) -> Box<String> {
     const EOL: &str = "\r\n";
 
     let len = data.len();
     let mut arr: Vec<String> = Vec::new();
 
     for i in 0..len {
-        arr.push(data[i].join(&delim));
+        arr.push(data[i].join(&delim.to_string()));
     }
     
-    arr.join(EOL)
+    Box::new(arr.join(EOL))
 }
 
 fn readtext(mut cx: FunctionContext) -> JsResult<JsString> {
     let name: Handle<JsString> = cx.argument(0)?;
     let file: String = name.value() as String;
 
-    let res = read_file(file);
+    let text = read_file(&file);
     
-    match res.ok() {
-        Some(text) => {
-            println!("{:?}", text.len());
-            return Ok(cx.string(text.to_string()));    
-        },
-        _ => {
-            println!("{:?}", "none is ready");
-            return Ok(cx.string("".to_string()));    
-        }
-    }
+    Ok(cx.string(*text))
 }
 
 fn writetext(mut cx: FunctionContext) -> JsResult<JsNumber> {
@@ -166,29 +249,34 @@ fn writetext(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let file: String = name.value() as String;
     let data: String = cont.value() as String;
 
-    let res = write_file(file, &data);
+    let size = write_file(file, &data);
     
-    match res.ok() {
-        Some(size) => {
-            return Ok(cx.number(size as f64));    
-        },
-        _ => {
-            return Ok(cx.number(0));    
-        }
-    }
+    Ok(cx.number(size as f64))
 }
 
-fn convert(mut cx: FunctionContext) -> JsResult<JsString> {
-    let targ: Handle<JsString> = cx.argument(0)?;
-    let darg: Handle<JsString> = cx.argument(1)?;
+fn convert(mut cx: FunctionContext) -> JsResult<JsNumber> {
+    let s: Handle<JsString> = cx.argument(0)?;
+    let t: Handle<JsString> = cx.argument(1)?;
 
-    let text: String = targ.value() as String; 
-    let delim: String = darg.value() as String; 
+    let source: String = s.value() as String; 
+    let target: String = t.value() as String;
 
-    let data: Vec<Vec<String>> = parse_csv(&text);
-    let tsv: String = format_text(&data, delim);
+    let mut data: Vec<Vec<String>> = Vec::new();
+    let map: HashMap<&str, char> = Extensions::new();
+    let stype = file_type(&source);
+    let ttype = file_type(&target);
+    let text = read_file(&source);
 
-    Ok(cx.string(tsv))
+    if stype == "csv" {
+        data = *parse_csv_2(&text);
+    }
+
+    let delim = file_delim(&ttype, &map);
+
+    let text: Box<String> = format_text(&data, delim);
+    let size: usize = write_file(target, &text);
+
+    Ok(cx.number(size as f64))
 }
 
 register_module!(mut cx, {
@@ -197,5 +285,6 @@ register_module!(mut cx, {
     cx.export_function("convert", convert)?;
     cx.export_function("readtext", readtext)?;
     cx.export_function("writetext", writetext)?;
+
     Ok(())
 });
