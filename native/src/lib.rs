@@ -38,10 +38,6 @@ fn file_delim(mode: &str, map: &HashMap<&str, char>) -> char {
     *map.get(mode).unwrap_or(&COMMA)
 }
 
-fn vec_string<'a, 'b>(vec: &Vec<char>) -> String {
-    vec.iter().cloned().collect::<String>()
-}
-
 fn read_file<'a>(file: &String) -> Box<String> {
     let mut file = File::open(file).unwrap();
     let mut contents = String::new();
@@ -76,8 +72,6 @@ fn auto_trim (mut text: String, beg: bool, end: bool) -> Box<String> {
 
 fn parse_csv_2(text: &str) -> Box<Vec<Vec<String>>> {
     let mut data: Vec<Vec<String>> = Vec::new();
-    let mut line: Vec<String> = Vec::new();
-    let mut word: Vec<char> = Vec::new();
 
     let lines = text.lines().enumerate();
 
@@ -116,108 +110,6 @@ fn parse_csv_2(text: &str) -> Box<Vec<Vec<String>>> {
     }
 
     Box::new(data)
-}
-
-fn parse_csv(text: &str) -> Vec<Vec<String>> {
-    const DCHAR: char = '_';
-    const QUOTE: char = '"';
-
-    let mut data: Vec<Vec<String>> = Vec::new();
-    let mut line: Vec<String> = Vec::new();
-    let mut word: Vec<char> = Vec::new();
-
-    let lines = text.lines().enumerate();
-
-    for (_li, ln) in lines {
-        let mut open: bool = false;
-        let mut prev: char = DCHAR;
-
-        let len: usize = ln.len();
-        let last: usize = len - 1;
-        let chrs = ln.chars().enumerate();
-
-        for (ci, cr) in chrs {
-            if ci == 0 && ci == last { // one caracter string
-                word.push(cr);
-                line.push(vec_string(&word));
-            }
-            else if ci == 0 {        // beg of line
-                if cr == COMMA {
-                    line.push(vec_string(&word));
-                }
-                else if cr == QUOTE {
-                    open = true;
-                }
-                else {
-                    word.push(cr);
-                }
-            }
-            else if ci == last {      // end of line
-                if open {           // QUOTEs opened
-                    if cr == COMMA {
-                        word.insert(0, QUOTE);
-                        line.push(vec_string(&word));
-                        word.clear();
-                    }
-                    else if cr != QUOTE {
-                        word.push(cr);
-                    }
-
-                    line.push(vec_string(&word));
-                }               
-                else {              // no QUOTEs opened
-                    if cr == COMMA {
-                        line.push(vec_string(&word));
-                        word.clear();
-                        line.push(vec_string(&word));
-                    }
-                    else {
-                        word.push(cr);
-                        line.push(vec_string(&word));
-                    }
-                }
-            }
-            else {                  // any other position
-                if open {
-                    if cr == QUOTE && prev == QUOTE {
-                        word.push(cr);
-                    } 
-                    else if cr == QUOTE {
-                        open = false;
-                    }
-                    else if cr != QUOTE {
-                        word.push(cr);
-                    }
-                } else {
-                    if cr == QUOTE && prev == QUOTE {
-                        word.push(cr);
-                    } 
-                    else if cr == COMMA && prev == QUOTE {
-                        line.push(vec_string(&word));
-                        word.clear();
-                    }
-                    else if cr == COMMA {
-                        line.push(vec_string(&word));
-                        word.clear();
-                    }
-                    else if cr == QUOTE && prev == COMMA {
-                        open = true;
-                    }
-                    else if cr != QUOTE {
-                        word.push(cr);
-                    }
-                }
-            }
-
-            prev = cr;
-        }
-
-        data.push(line.clone());
-        word.clear();
-        line.clear();
-
-    }
-    data
 }
 
 fn format_text(data: &Vec<Vec<String>>, delim: char) -> Box<String> {
