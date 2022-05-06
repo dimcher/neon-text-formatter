@@ -70,23 +70,28 @@ fn auto_trim (mut text: String, beg: bool, end: bool) -> Box<String> {
     Box::new(text)
 }
 
-fn parse_csv_2(text: &str) -> Box<Vec<Vec<String>>> {
+fn parse_csv(text: &str) -> Box<Vec<Vec<String>>> {
     let mut data: Vec<Vec<String>> = Vec::new();
+    let re = Regex::new(r#""{2}"#).unwrap();
 
     let lines = text.lines().enumerate();
 
     for (_li, ln) in lines {
-        let parts = ln.split(COMMA).enumerate();
-        let mut words: Vec<String> = Vec::new();
+        let ln = re.replace(ln, String::from(QUOTE));
 
+        let parts = ln.split(COMMA).enumerate();
+        let last = parts.clone().count() - 1;
+
+        let mut words: Vec<String> = Vec::new();
         let mut append: String = String::from("");
 
-        for (_wi, wd) in parts {
+        for (wi, wd) in parts {
             let [min, max]: [char; 2] = minmax(wd);
             let beg: bool = min == QUOTE;
             let end: bool = max == QUOTE;
 
             if append.len() > 0 {
+                append.push_str(&String::from(COMMA));
                 append.push_str(wd);
                 
                 if end {
@@ -94,12 +99,15 @@ fn parse_csv_2(text: &str) -> Box<Vec<Vec<String>>> {
                     words.push(append);
                     append = String::new();
                 }
+                else if wi == last {
+                    words.push(*auto_trim(append.clone(), true, end));
+                }
 
                 continue;
             }
 
-            if beg && !end {
-                append = *auto_trim(String::from(wd), beg, end);
+            if beg && !end && wi != last {
+                append = String::from(wd);
                 continue;
             }
 
@@ -160,7 +168,7 @@ fn convert(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let text = read_file(&source);
 
     if stype == "csv" {
-        data = *parse_csv_2(&text);
+        data = *parse_csv(&text);
     }
 
     let delim = file_delim(&ttype, &map);
