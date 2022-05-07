@@ -166,10 +166,12 @@ fn format_data(data: &Vec<Vec<String>>, delim: char) -> Box<String> {
 fn cx_array<'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<'a, JsArray> {
     let rows: Handle<JsArray> = cx.empty_array();
 
-    for (ri, rd) in vec.iter().enumerate() {
+    let rl: usize = vec.len();
+
+    for ri in 0..rl {
         let cols: Handle<JsArray> = cx.empty_array();
 
-        for (ci, cd) in rd.iter().enumerate() {
+        for (ci, cd) in vec[ri].iter().enumerate() {
             let value = cx.string(cd);
             cols.set(cx, ci as u32, value)?;
         }
@@ -180,27 +182,25 @@ fn cx_array<'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<
     Ok(rows)
 }
 
-fn cx_object <'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<'a, JsObject> {
-    let head: Vec<String> = if let vec.len() > 0 {
-        vec.remove(0);
-     }
-     else { 
-         Vec::new();
-     };
-
+fn cx_object <'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<'a, JsArray> {
     let rows: Handle<JsArray> = cx.empty_array();
 
-    for (ri, rd) in vec.iter().enumerate() {
-        let vals: Handle<JsObject> = cx.empty_object();
+    let head =
+        if vec.len() > 0    { vec[0].clone() }
+        else                { Vec::new() };
 
-        for (ci, cd) in rd.iter().enumerate() {
-            let vals: Handle<JsArray> = cx.empty_array();
+    let rl: usize = vec.len();
+    let hl: usize = head.len();
 
-            let value = cx.string(cd);
-            cols.set(cx, key, value)?;
+    for ri in 1..rl {
+        let obj: Handle<JsObject> = cx.empty_object();
+
+        for hi in 0..hl {
+            let val = cx.string(vec[ri][hi].clone());
+            obj.set(cx, head[hi].as_ref(), val)?;
         }
 
-        rows.set(cx, ri as u32, cols)?;
+        rows.set(cx, (ri-1) as u32, obj)?;
     }
 
     Ok(rows)
@@ -214,6 +214,16 @@ fn readarray(mut cx: FunctionContext) -> JsResult<JsArray> {
     let data = read_array(&source);
 
     cx_array(&data, &mut cx)
+}
+
+fn readobject(mut cx: FunctionContext) -> JsResult<JsArray> {
+    let s: Handle<JsString> = cx.argument(0)?;
+
+    let source: String = s.value() as String; 
+
+    let data = read_array(&source);
+
+    cx_object(&data, &mut cx)
 }
 
 fn readtext(mut cx: FunctionContext) -> JsResult<JsString> {
@@ -247,7 +257,6 @@ fn convert(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let map: HashMap<&str, char> = Extensions::new();
 
     let data = read_array(&source);
-
     let ttype = file_type(&target);
     let delim = file_delim(&ttype, &map);
 
@@ -261,9 +270,10 @@ register_module!(mut cx, {
     println!("Register local methods");
 
     cx.export_function("convert", convert)?;
-    cx.export_function("readtext", readtext)?;
-    cx.export_function("writetext", writetext)?;
-    cx.export_function("readarray", readarray)?;
+    cx.export_function("readText", readtext)?;
+    cx.export_function("writeText", writetext)?;
+    cx.export_function("readArray", readarray)?;
+    cx.export_function("readObject", readobject)?;
 
     Ok(())
 });
