@@ -5,18 +5,18 @@ use regex::Regex;
 use std::{fs::File, io::{Read, Write}, {collections::HashMap}};
 
 const EOL: &str = "\r\n";
-const COMMA: char = ',';
+const COMMA: &str = ",";
 const QUOTE: char = '"';
 
 struct Extensions {}
 
 impl Extensions {
-    fn new() -> HashMap<&'static str, char> {
+    fn new<'a>() -> HashMap<&'a str, &'a str> {
         let mut map = HashMap::new();
 
-        map.insert("csv", ',');
-        map.insert("tsv", '\t');
-        map.insert("psv", '|');
+        map.insert("csv", ",");
+        map.insert("tsv", "\t");
+        map.insert("psv", "|");
 
         map
     }
@@ -28,15 +28,15 @@ fn minmax(word: &str) -> [char; 2] {
     [w[0], w[w.len()-1]]
 }
 
-fn file_type(file: &str) -> String {
+fn file_type(file: &str) -> Box<String> {
     let re = Regex::new(r"[^\.]+$").unwrap();
     let mat = re.find(file).unwrap();
     
-    file[mat.start()..mat.end()].to_string()
+    Box::new(file[mat.start()..mat.end()].to_string())
 }
 
-fn file_delim(mode: &str, map: &HashMap<&str, char>) -> char {
-    *map.get(mode).unwrap_or(&COMMA)
+fn file_delim<'a>(mode: &str, map: &HashMap<&str, &str>) -> Box<String> {
+    Box::new(map.get(mode).unwrap_or(&COMMA).to_string())
 }
 
 fn read_file<'a>(file: &str) -> Box<String> {
@@ -48,12 +48,12 @@ fn read_file<'a>(file: &str) -> Box<String> {
     Box::new(contents)
 }
 
-fn write_file(file: String, text: &str) -> usize {
+fn write_file(file: &str, data: &str) -> usize {
     let mut file = File::create(file).unwrap();
-    let data = text.as_bytes();
+    let data = data.as_bytes();
     file.write_all(data).unwrap();
 
-    text.len()
+    data.len()
 }
 
 fn auto_trim (mut text: String, beg: bool, end: bool) -> Box<String> {
@@ -97,7 +97,7 @@ fn parse_csv(text: &str) -> Box<Vec<Vec<String>>> {
             let end: bool = max == QUOTE;
 
             if append.len() > 0 {
-                append.push_str(&String::from(COMMA));
+                append.push_str(COMMA);
                 append.push_str(wd);
                 
                 if end {
@@ -139,20 +139,26 @@ fn parse_data(text: &str, delim: &str) -> Box<Vec<Vec<String>>> {
     Box::new(data)
 }
 
-fn read_array(file: &str) -> Box<Vec<Vec<String>>> {
-    let map: HashMap<&str, char> = Extensions::new();
-    let fmt: String = file_type(file);
-    let data = read_file(file);
-    let delim = file_delim(&fmt, &map);
+fn parse_text(data: &str, delim: &str) -> Box<Vec<Vec<String>>> {
+    let map: HashMap<&str, &str> = Extensions::new();
 
-    if fmt == "csv" {
+    if *delim == *COMMA {
         return parse_csv(&data);
     }
 
     return parse_data(&data, &String::from(delim))
 }
 
-fn format_data(data: &Vec<Vec<String>>, delim: char) -> Box<String> {
+fn file_array(file: &str) -> Box<Vec<Vec<String>>> {
+    let map: HashMap<&str, &str> = Extensions::new();
+    let fmt = file_type(file);
+    let data = read_file(file);
+    let delim = file_delim(&fmt, &map);
+
+    parse_text(&data, &delim)
+}
+
+fn conv_data(data: &Vec<Vec<String>>, delim: &str) -> Box<String> {
     let len = data.len();
     let mut arr: Vec<String> = Vec::new();
 
@@ -211,7 +217,7 @@ fn readarray(mut cx: FunctionContext) -> JsResult<JsArray> {
 
     let source: String = s.value() as String; 
 
-    let data = read_array(&source);
+    let data = file_array(&source);
 
     cx_array(&data, &mut cx)
 }
@@ -221,7 +227,7 @@ fn readobject(mut cx: FunctionContext) -> JsResult<JsArray> {
 
     let source: String = s.value() as String; 
 
-    let data = read_array(&source);
+    let data = file_array(&source);
 
     cx_object(&data, &mut cx)
 }
@@ -236,13 +242,13 @@ fn readtext(mut cx: FunctionContext) -> JsResult<JsString> {
 }
 
 fn writetext(mut cx: FunctionContext) -> JsResult<JsNumber> {
-    let name: Handle<JsString> = cx.argument(0)?;
-    let cont: Handle<JsString> = cx.argument(1)?;
+    let o: Handle<JsString> = cx.argument(0)?;
+    let d: Handle<JsString> = cx.argument(1)?;
 
-    let file: String = name.value() as String;
-    let data: String = cont.value() as String;
+    let file: &str = &o.value();
+    let data: &str = &d.value();
 
-    let size = write_file(file, &data);
+    let size = write_file(file, data);
     
     Ok(cx.number(size as f64))
 }
@@ -251,16 +257,57 @@ fn convert(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let s: Handle<JsString> = cx.argument(0)?;
     let t: Handle<JsString> = cx.argument(1)?;
 
-    let source: String = s.value() as String; 
-    let target: String = t.value() as String;
+    let source: &str = &s.value(); 
+    let target: &str = &t.value();
 
-    let map: HashMap<&str, char> = Extensions::new();
+    let map: HashMap<&str, &str> = Extensions::new();
 
-    let data = read_array(&source);
+    let data = file_array(&source);
     let ttype = file_type(&target);
     let delim = file_delim(&ttype, &map);
 
-    let text: Box<String> = format_data(&data, delim);
+    let text: Box<String> = conv_data(&data, &delim);
+    let size: usize = write_file(target, &text);
+
+    Ok(cx.number(size as f64))
+}
+
+fn convfile(mut cx: FunctionContext) -> JsResult<JsNumber> {
+    let i: Handle<JsString> = cx.argument(0)?;
+    let o: Handle<JsString> = cx.argument(1)?;
+
+    let source: &str = &i.value(); 
+    let target: &str = &o.value();
+
+    let map: HashMap<&str, &str> = Extensions::new();
+
+    let data = file_array(&source);
+    let ttype = file_type(&target);
+    let delim = file_delim(&ttype, &map);
+
+    let text: Box<String> = conv_data(&data, &delim);
+    let size: usize = write_file(target, &text);
+
+    Ok(cx.number(size as f64))
+}
+
+fn convtext(mut cx: FunctionContext) -> JsResult<JsNumber> {
+    let i: Handle<JsString> = cx.argument(0)?;
+    let d: Handle<JsString> = cx.argument(1)?;
+    let o: Handle<JsString> = cx.argument(2)?;
+
+    let text: &str = &i.value(); 
+    let delim: &str = &d.value(); 
+    let target: &str = &o.value();
+
+    let map: HashMap<&str, &str> = Extensions::new();
+
+    let data = parse_text(text, delim);
+
+    let ttype = file_type(&target);
+    let delim = file_delim(&ttype, &map);
+
+    let text = conv_data(&data, &delim);
     let size: usize = write_file(target, &text);
 
     Ok(cx.number(size as f64))
@@ -269,7 +316,8 @@ fn convert(mut cx: FunctionContext) -> JsResult<JsNumber> {
 register_module!(mut cx, {
     println!("Register local methods");
 
-    cx.export_function("convert", convert)?;
+    cx.export_function("convFile", convfile)?;
+    cx.export_function("convText", convtext)?;
     cx.export_function("readText", readtext)?;
     cx.export_function("writeText", writetext)?;
     cx.export_function("readArray", readarray)?;
