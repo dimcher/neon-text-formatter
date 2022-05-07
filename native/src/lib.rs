@@ -4,6 +4,7 @@ use regex::Regex;
 
 use std::{fs::File, io::{Read, Write}, {collections::HashMap}};
 
+const EOL: &str = "\r\n";
 const COMMA: char = ',';
 const QUOTE: char = '"';
 
@@ -27,9 +28,9 @@ fn minmax(word: &str) -> [char; 2] {
     [w[0], w[w.len()-1]]
 }
 
-fn file_type(file: &String) -> String {
+fn file_type(file: &str) -> String {
     let re = Regex::new(r"[^\.]+$").unwrap();
-    let mat = re.find(&file).unwrap();
+    let mat = re.find(file).unwrap();
     
     file[mat.start()..mat.end()].to_string()
 }
@@ -38,7 +39,7 @@ fn file_delim(mode: &str, map: &HashMap<&str, char>) -> char {
     *map.get(mode).unwrap_or(&COMMA)
 }
 
-fn read_file<'a>(file: &String) -> Box<String> {
+fn read_file<'a>(file: &str) -> Box<String> {
     let mut file = File::open(file).unwrap();
     let mut contents = String::new();
 
@@ -86,7 +87,12 @@ fn parse_csv(text: &str) -> Box<Vec<Vec<String>>> {
         let mut append: String = String::from("");
 
         for (wi, wd) in parts {
-            let [min, max]: [char; 2] = minmax(wd);
+            let [mut min, mut max]: [char; 2] = [' ', ' '];
+
+            if wd.len() > 0 {
+                [min, max] = minmax(wd);
+            }
+
             let beg: bool = min == QUOTE;
             let end: bool = max == QUOTE;
 
@@ -120,9 +126,33 @@ fn parse_csv(text: &str) -> Box<Vec<Vec<String>>> {
     Box::new(data)
 }
 
-fn format_text(data: &Vec<Vec<String>>, delim: char) -> Box<String> {
-    const EOL: &str = "\r\n";
+fn parse_data(text: &str, delim: &str) -> Box<Vec<Vec<String>>> {
+    let mut data: Vec<Vec<String>> = Vec::new();
 
+    let lines = text.lines().enumerate();
+
+    for (_li, ln) in lines {
+        let vec = ln.split(delim).map(String::from).collect();
+        data.push(vec);
+    }
+
+    Box::new(data)
+}
+
+fn read_array(file: &str) -> Box<Vec<Vec<String>>> {
+    let map: HashMap<&str, char> = Extensions::new();
+    let fmt: String = file_type(file);
+    let data = read_file(file);
+    let delim = file_delim(&fmt, &map);
+
+    if fmt == "csv" {
+        return parse_csv(&data);
+    }
+
+    return parse_data(&data, &String::from(delim))
+}
+
+fn format_data(data: &Vec<Vec<String>>, delim: char) -> Box<String> {
     let len = data.len();
     let mut arr: Vec<String> = Vec::new();
 
@@ -131,6 +161,59 @@ fn format_text(data: &Vec<Vec<String>>, delim: char) -> Box<String> {
     }
     
     Box::new(arr.join(EOL))
+}
+
+fn cx_array<'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<'a, JsArray> {
+    let rows: Handle<JsArray> = cx.empty_array();
+
+    for (ri, rd) in vec.iter().enumerate() {
+        let cols: Handle<JsArray> = cx.empty_array();
+
+        for (ci, cd) in rd.iter().enumerate() {
+            let value = cx.string(cd);
+            cols.set(cx, ci as u32, value)?;
+        }
+
+        rows.set(cx, ri as u32, cols)?;
+    }
+
+    Ok(rows)
+}
+
+fn cx_object <'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<'a, JsObject> {
+    let head: Vec<String> = if let vec.len() > 0 {
+        vec.remove(0);
+     }
+     else { 
+         Vec::new();
+     };
+
+    let rows: Handle<JsArray> = cx.empty_array();
+
+    for (ri, rd) in vec.iter().enumerate() {
+        let vals: Handle<JsObject> = cx.empty_object();
+
+        for (ci, cd) in rd.iter().enumerate() {
+            let vals: Handle<JsArray> = cx.empty_array();
+
+            let value = cx.string(cd);
+            cols.set(cx, key, value)?;
+        }
+
+        rows.set(cx, ri as u32, cols)?;
+    }
+
+    Ok(rows)
+}
+
+fn readarray(mut cx: FunctionContext) -> JsResult<JsArray> {
+    let s: Handle<JsString> = cx.argument(0)?;
+
+    let source: String = s.value() as String; 
+
+    let data = read_array(&source);
+
+    cx_array(&data, &mut cx)
 }
 
 fn readtext(mut cx: FunctionContext) -> JsResult<JsString> {
@@ -161,19 +244,14 @@ fn convert(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let source: String = s.value() as String; 
     let target: String = t.value() as String;
 
-    let mut data: Vec<Vec<String>> = Vec::new();
     let map: HashMap<&str, char> = Extensions::new();
-    let stype = file_type(&source);
+
+    let data = read_array(&source);
+
     let ttype = file_type(&target);
-    let text = read_file(&source);
-
-    if stype == "csv" {
-        data = *parse_csv(&text);
-    }
-
     let delim = file_delim(&ttype, &map);
 
-    let text: Box<String> = format_text(&data, delim);
+    let text: Box<String> = format_data(&data, delim);
     let size: usize = write_file(target, &text);
 
     Ok(cx.number(size as f64))
@@ -185,6 +263,7 @@ register_module!(mut cx, {
     cx.export_function("convert", convert)?;
     cx.export_function("readtext", readtext)?;
     cx.export_function("writetext", writetext)?;
+    cx.export_function("readarray", readarray)?;
 
     Ok(())
 });
