@@ -12,13 +12,13 @@ struct Extensions {}
 
 impl Extensions {
     fn new<'a>() -> HashMap<&'a str, &'a str> {
-        let mut map = HashMap::new();
+        let mut hmap = HashMap::new();
 
-        map.insert("csv", ",");
-        map.insert("tsv", "\t");
-        map.insert("psv", "|");
+        hmap.insert("csv", ",");
+        hmap.insert("tsv", "\t");
+        hmap.insert("psv", "|");
 
-        map
+        hmap
     }
 }
 
@@ -140,8 +140,6 @@ fn parse_data(text: &str, delim: &str) -> Box<Vec<Vec<String>>> {
 }
 
 fn parse_text(data: &str, delim: &str) -> Box<Vec<Vec<String>>> {
-    let map: HashMap<&str, &str> = Extensions::new();
-
     if *delim == *COMMA {
         return parse_csv(&data);
     }
@@ -253,23 +251,19 @@ fn writetext(mut cx: FunctionContext) -> JsResult<JsNumber> {
     Ok(cx.number(size as f64))
 }
 
-fn convert(mut cx: FunctionContext) -> JsResult<JsNumber> {
-    let s: Handle<JsString> = cx.argument(0)?;
-    let t: Handle<JsString> = cx.argument(1)?;
-
-    let source: &str = &s.value(); 
-    let target: &str = &t.value();
-
+fn filetypes(mut cx: FunctionContext) -> JsResult<JsObject> {
     let map: HashMap<&str, &str> = Extensions::new();
 
-    let data = file_array(&source);
-    let ttype = file_type(&target);
-    let delim = file_delim(&ttype, &map);
+    let obj: Handle<JsObject> = cx.empty_object();
 
-    let text: Box<String> = conv_data(&data, &delim);
-    let size: usize = write_file(target, &text);
+    for (k, v) in map {
+        let key = cx.string(k);
+        let val = cx.string(v);
 
-    Ok(cx.number(size as f64))
+        obj.set(&mut cx, key, val).unwrap();
+    }
+
+    Ok(obj)
 }
 
 fn convfile(mut cx: FunctionContext) -> JsResult<JsNumber> {
@@ -285,7 +279,7 @@ fn convfile(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let ttype = file_type(&target);
     let delim = file_delim(&ttype, &map);
 
-    let text: Box<String> = conv_data(&data, &delim);
+    let text = conv_data(&data, &delim);
     let size: usize = write_file(target, &text);
 
     Ok(cx.number(size as f64))
@@ -320,6 +314,7 @@ register_module!(mut cx, {
     cx.export_function("convText", convtext)?;
     cx.export_function("readText", readtext)?;
     cx.export_function("writeText", writetext)?;
+    cx.export_function("fileTypes", filetypes)?;
     cx.export_function("readArray", readarray)?;
     cx.export_function("readObject", readobject)?;
 
