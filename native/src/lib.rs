@@ -2,15 +2,16 @@ use neon::prelude::*;
 
 use regex::Regex;
 
-use std::{fs::File, io::{Read, Write}, {collections::HashMap}};
+use std::{fs::File, io::{Read, Write}, {thread, collections::HashMap}};
 
 const EOL: &str = "\r\n";
 const COMMA: &str = ",";
 const QUOTE: char = '"';
+const THSIZE: usize = 3;
 
-struct Extensions {}
+struct Files {}
 
-impl Extensions {
+impl Files {
     fn new<'a>() -> HashMap<&'a str, &'a str> {
         let mut hmap = HashMap::new();
 
@@ -71,14 +72,12 @@ fn auto_trim (mut text: String, beg: bool, end: bool) -> Box<String> {
     Box::new(text)
 }
 
-fn parse_csv(text: &str) -> Box<Vec<Vec<String>>> {
+fn parse_csv(lines: &Vec<String>) -> Box<Vec<Vec<String>>> {
     let mut data: Vec<Vec<String>> = Vec::new();
     let re = Regex::new(r#""{2}"#).unwrap();
 
-    let lines = text.lines().enumerate();
-
-    for (_li, ln) in lines {
-        let ln = re.replace(ln, String::from(QUOTE));
+    for line in lines {
+        let ln = re.replace(line, String::from(QUOTE));
 
         let parts = ln.split(COMMA).enumerate();
         let last = parts.clone().count() - 1;
@@ -126,29 +125,56 @@ fn parse_csv(text: &str) -> Box<Vec<Vec<String>>> {
     Box::new(data)
 }
 
-fn parse_data(text: &str, delim: &str) -> Box<Vec<Vec<String>>> {
+fn parse_data(lines: &Vec<String>, delim: &str) -> Box<Vec<Vec<String>>> {
     let mut data: Vec<Vec<String>> = Vec::new();
 
-    let lines = text.lines().enumerate();
-
-    for (_li, ln) in lines {
-        let vec = ln.split(delim).map(String::from).collect();
+    for line in lines {
+        let vec = line.split(delim).map(String::from).collect();
         data.push(vec);
     }
 
     Box::new(data)
 }
 
-fn parse_text(data: &str, delim: &str) -> Box<Vec<Vec<String>>> {
-    if *delim == *COMMA {
-        return parse_csv(&data);
+fn run_thread(data: &Vec<String>, delim: &str) -> Box<Vec<Vec<String>>> {
+    if delim == COMMA {
+        return parse_csv(data);
     }
 
-    return parse_data(&data, &String::from(delim))
+    parse_data(data, delim)
+}
+
+fn parse_text(data: &str, delim: &str) -> Box<Vec<Vec<String>>> {
+    let lines: Vec<String> = data.lines().map(|g| g.into()).collect();
+    let lsize: usize = lines.len();
+    let csize = lsize / THSIZE;
+    let chunks: Vec<Vec<String>> = lines.chunks(THSIZE).map(|m| m.into()).collect();
+    let mut handles = vec![];
+
+    for i in 0..csize {
+        println!("Chunk={:?}={}", chunks[i], i);
+        let dl = String::from(delim).clone();
+        let ln = lines.clone();
+
+        let handle = thread::spawn(move || {
+            run_thread(&ln, &dl)
+        });
+
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        println!("Result={:?}", handle);
+        let result = handle.join().unwrap();
+    }
+
+        println!("Finished:{:?}", "dimcher");
+
+    Box::new(Vec::new())
 }
 
 fn file_array(file: &str) -> Box<Vec<Vec<String>>> {
-    let map: HashMap<&str, &str> = Extensions::new();
+    let map: HashMap<&str, &str> = Files::new();
     let fmt = file_type(file);
     let data = read_file(file);
     let delim = file_delim(&fmt, &map);
@@ -252,7 +278,7 @@ fn writetext(mut cx: FunctionContext) -> JsResult<JsNumber> {
 }
 
 fn filetypes(mut cx: FunctionContext) -> JsResult<JsObject> {
-    let map: HashMap<&str, &str> = Extensions::new();
+    let map: HashMap<&str, &str> = Files::new();
 
     let obj: Handle<JsObject> = cx.empty_object();
 
@@ -273,7 +299,7 @@ fn convfile(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let source: &str = &i.value(); 
     let target: &str = &o.value();
 
-    let map: HashMap<&str, &str> = Extensions::new();
+    let map: HashMap<&str, &str> = Files::new();
 
     let data = file_array(&source);
     let ttype = file_type(&target);
@@ -285,7 +311,7 @@ fn convfile(mut cx: FunctionContext) -> JsResult<JsNumber> {
     Ok(cx.number(size as f64))
 }
 
-fn convtext(mut cx: FunctionContext) -> JsResult<JsNumber> {
+fn convtext<'a>(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let i: Handle<JsString> = cx.argument(0)?;
     let d: Handle<JsString> = cx.argument(1)?;
     let o: Handle<JsString> = cx.argument(2)?;
@@ -294,7 +320,7 @@ fn convtext(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let delim: &str = &d.value(); 
     let target: &str = &o.value();
 
-    let map: HashMap<&str, &str> = Extensions::new();
+    let map: HashMap<&str, &str> = Files::new();
 
     let data = parse_text(text, delim);
 
