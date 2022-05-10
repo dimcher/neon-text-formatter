@@ -89,9 +89,8 @@ fn writetext(mut cx: FunctionContext) -> JsResult<JsNumber> {
 }
 
 fn filetypes(mut cx: FunctionContext) -> JsResult<JsObject> {
-    let map: HashMap<&str, &str> = support::Files::new();
-
     let obj: Handle<JsObject> = cx.empty_object();
+    let map: HashMap<&str, &str> = support::Files::new();
 
     for (k, v) in map {
         let key = cx.string(k);
