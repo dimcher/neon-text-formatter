@@ -164,8 +164,8 @@ fn parse_text(data: &str, delim: &str) -> Box<Vec<Vec<String>>> {
     }
 
     for handle in handles {
-        println!("Result={:?}", handle);
         let result = handle.join().unwrap();
+        println!("Result={:?}", result);
     }
 
         println!("Finished:{:?}", "dimcher");
