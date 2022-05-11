@@ -1,17 +1,23 @@
 use std::collections::HashMap;
 
+pub const EOL: &str = "\r\n";
+pub const COMMA: &str = ",";
+pub const QUOTE: char = '"';
+pub const THSIZE: usize = 3;
+
 pub struct FileFormats {
-    map: HashMap<&'static str, &'static str>
+    map: HashMap<&'static str, &'static str>,
 }
 
 impl FileFormats {
     pub fn new() -> Self {
         Self {
             map: HashMap::from([
-                ("csv", ","),
+                ("csv", COMMA),
                 ("tsv", "\t"),
                 ("psv", "|"),
             ])
+
         }
     }
 

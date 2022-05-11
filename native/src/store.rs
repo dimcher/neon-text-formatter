@@ -6,11 +6,6 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::{fs::File, io::{Read, Write}, {thread}};
 
-const EOL: &str = "\r\n";
-const COMMA: &str = ",";
-const QUOTE: char = '"';
-const THSIZE: usize = 3;
-
 /* 
 trait Threads {
     fn run(&self, order: &usize);
@@ -80,7 +75,7 @@ fn min_max(word: &str) -> Box<[char; 2]> {
     Box::new([w[0], w[w.len()-1]])
 }
 
-pub fn file_formats<'a>() -> Box<HashMap<&'static str, &'static str>> {
+pub fn file_formats() -> Box<HashMap<&'static str, &'static str>> {
     let map = FileFormats::new();
     map.get_map()
 }
