@@ -1,8 +1,7 @@
-mod support;
+mod store;
+use store::*;
 
 use neon::prelude::*;
-
-use std::collections::HashMap;
 
 fn cx_array<'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<'a, JsArray> {
     let rows: Handle<JsArray> = cx.empty_array();
@@ -52,7 +51,7 @@ fn readarray(mut cx: FunctionContext) -> JsResult<JsArray> {
 
     let source: String = s.value() as String; 
 
-    let data = support::file_array(&source);
+    let data = file_array(&source);
 
     cx_array(&data, &mut cx)
 }
@@ -62,7 +61,7 @@ fn readobject(mut cx: FunctionContext) -> JsResult<JsArray> {
 
     let source: String = s.value() as String; 
 
-    let data = support::file_array(&source);
+    let data = file_array(&source);
 
     cx_object(&data, &mut cx)
 }
@@ -71,7 +70,7 @@ fn readtext(mut cx: FunctionContext) -> JsResult<JsString> {
     let name: Handle<JsString> = cx.argument(0)?;
     let file: String = name.value() as String;
 
-    let text = support::read_file(&file);
+    let text = read_file(&file);
     
     Ok(cx.string(*text))
 }
@@ -83,16 +82,16 @@ fn writetext(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let file: &str = &o.value();
     let data: &str = &d.value();
 
-    let size = support::write_file(file, data);
+    let size = write_file(file, data);
     
     Ok(cx.number(size as f64))
 }
 
 fn filetypes(mut cx: FunctionContext) -> JsResult<JsObject> {
     let obj: Handle<JsObject> = cx.empty_object();
-    let map: HashMap<&str, &str> = support::Files::new();
+    let map = file_formats();
 
-    for (k, v) in map {
+    for (k, v) in *map {
         let key = cx.string(k);
         let val = cx.string(v);
 
@@ -109,14 +108,12 @@ fn convfile(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let source: &str = &i.value(); 
     let target: &str = &o.value();
 
-    let map: HashMap<&str, &str> = support::Files::new();
+    let data = file_array(&source);
+    let ttype = file_type(&target);
+    let delim = file_delim(&ttype);
 
-    let data = support::file_array(&source);
-    let ttype = support::file_type(&target);
-    let delim = support::file_delim(&ttype, &map);
-
-    let text = support::conv_data(&data, &delim);
-    let size: usize = support::write_file(target, &text);
+    let text = conv_data(&data, &delim);
+    let size: usize = write_file(target, &text);
 
     Ok(cx.number(size as f64))
 }
@@ -130,15 +127,12 @@ fn convtext<'a>(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let delim: &str = &d.value(); 
     let target: &str = &o.value();
 
-    let map: HashMap<&str, &str> = support::Files::new();
+    let data = parse_text(text, delim);
+    let ttype = file_type(&target);
+    let delim = file_delim(&ttype);
 
-    let data = support::parse_text(text, delim);
-
-    let ttype = support::file_type(&target);
-    let delim = support::file_delim(&ttype, &map);
-
-    let text = support::conv_data(&data, &delim);
-    let size: usize = support::write_file(target, &text);
+    let text = conv_data(&data, &delim);
+    let size: usize = write_file(target, &text);
 
     Ok(cx.number(size as f64))
 }
