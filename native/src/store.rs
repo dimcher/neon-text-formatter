@@ -7,12 +7,12 @@ use std::{fs::File, io::{Read, Write}, {thread}};
 
 const EOL: &str = "\r\n";
 const QUOTE: char = '"';
-const THSIZE: usize = 3;
+const THSIZE: usize = 100000;
 
-fn min_max(word: &str) -> [char; 2] {
+fn min_max(word: &str) -> Box<[char; 2]> {
     let w: Vec<char> = word.chars().collect();
 
-    [w[0], w[w.len()-1]]
+    Box::new([w[0], w[w.len()-1]])
 }
 
 pub fn file_type<'a>(file: &'a str) -> &'a str {
@@ -72,7 +72,7 @@ pub fn parse_csv(lines: &Vec<String>) -> Box<Vec<Vec<String>>> {
             let [mut min, mut max]: [char; 2] = [' ', ' '];
 
             if wd.len() > 0 {
-                [min, max] = min_max(wd);
+                [min, max] = *min_max(wd);
             }
 
             let beg: bool = min == QUOTE;
@@ -126,35 +126,32 @@ fn run_thread(data: &Vec<String>, delim: &str) -> Box<Vec<Vec<String>>> {
     parse_data(data, delim)
 }
 
+fn foo(a: i32, f: Box<dyn Fn(i32) -> i32>) -> i32{ 
+    f(a)
+}
+
 pub fn parse_text(data: &str, delim: &str) -> Box<Vec<Vec<String>>> {
     let lines: Vec<String> = data.lines().map(|g| g.into()).collect();
     let chunks: Vec<Vec<String>> = lines.chunks(THSIZE).map(|m| m.into()).collect();
+    let mut vec = vec![];
+
     let mut handles = vec![];
-    
-//    type aaa = List;
-//    let a = aaa::Node(1, Box::new(List::Node(2, Box::new(List::None))));
 
-    for i in 0..chunks.len() {
-//        println!("Chunk={:?}={}", chunks[i], i);
-        let dl = String::from(delim).clone();
-        let ch = chunks[i].clone();
-
-        let handle = thread::spawn(move || {
-            run_thread(&ch, &dl)
-        });
+    for c in chunks {
+        let dl = delim.to_string();
+        let handle = thread::spawn(move || run_thread(&c, &dl));
 
         handles.push(handle);
     }
-    println!("Zoom={}", chunks.len());
 
-    for handle in handles {
-        let result = handle.join().unwrap();
-        println!("Result={:?}", result);
+    for h in handles {
+        let res = *h.join().unwrap();
+        let mut r = res;
+
+        vec.append(&mut r);
     }
 
-        println!("Finished:{:?}", "dimcher");
-
-    Box::new(Vec::new())
+    Box::new(vec)
 }
 
 pub fn file_array(file: &str) -> Box<Vec<Vec<String>>> {
