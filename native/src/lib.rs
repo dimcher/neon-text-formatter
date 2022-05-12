@@ -1,6 +1,9 @@
 mod store;
 use store::*;
 
+mod formats;
+use formats::*;
+
 use neon::prelude::*;
 
 fn cx_array<'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<'a, JsArray> {
@@ -69,10 +72,9 @@ fn readobject(mut cx: FunctionContext) -> JsResult<JsArray> {
 fn readtext(mut cx: FunctionContext) -> JsResult<JsString> {
     let name: Handle<JsString> = cx.argument(0)?;
     let file: String = name.value() as String;
-
-    let text = read_file(&file);
+    let data = read_file(&file);
     
-    Ok(cx.string(*text))
+    Ok(cx.string(*data))
 }
 
 fn writetext(mut cx: FunctionContext) -> JsResult<JsNumber> {
@@ -89,9 +91,9 @@ fn writetext(mut cx: FunctionContext) -> JsResult<JsNumber> {
 
 fn filetypes(mut cx: FunctionContext) -> JsResult<JsObject> {
     let obj: Handle<JsObject> = cx.empty_object();
-    let map = file_formats();
+    let map = FileFormats::new();
 
-    for (k, v) in *map {
+    for (k, v) in map.get_map() {
         let key = cx.string(k);
         let val = cx.string(v);
 
@@ -108,9 +110,10 @@ fn convfile(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let source: &str = &i.value(); 
     let target: &str = &o.value();
 
+    let map = FileFormats::new();
     let data = file_array(&source);
     let ttype = file_type(&target);
-    let delim = file_delim(&ttype);
+    let delim = map.file_delim(&ttype);
 
     let text = conv_data(&data, &delim);
     let size: usize = write_file(target, &text);
@@ -127,9 +130,10 @@ fn convtext<'a>(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let delim: &str = &d.value(); 
     let target: &str = &o.value();
 
+    let map = FileFormats::new();
     let data = parse_text(text, delim);
     let ttype = file_type(&target);
-    let delim = file_delim(&ttype);
+    let delim = map.file_delim(&ttype);
 
     let text = conv_data(&data, &delim);
     let size: usize = write_file(target, &text);
