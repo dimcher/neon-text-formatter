@@ -126,10 +126,6 @@ fn run_thread(data: &Vec<String>, delim: &str) -> Box<Vec<Vec<String>>> {
     parse_data(data, delim)
 }
 
-fn foo(a: i32, f: Box<dyn Fn(i32) -> i32>) -> i32{ 
-    f(a)
-}
-
 pub fn parse_text(data: &str, delim: &str) -> Box<Vec<Vec<String>>> {
     let lines: Vec<String> = data.lines().map(|g| g.into()).collect();
     let chunks: Vec<Vec<String>> = lines.chunks(THSIZE).map(|m| m.into()).collect();
