@@ -62,13 +62,14 @@ pub fn parse_csv(lines: &Vec<String>) -> Box<Vec<Vec<String>>> {
     for line in lines {
         let ln = re.replace(line, String::from(QUOTE));
 
-        let parts = ln.split(COMMA).enumerate();
-        let last = parts.clone().count() - 1;
+        let parts: Vec<&str> = ln.split(COMMA).collect();
+        let last = parts.len();
 
         let mut words: Vec<String> = Vec::new();
         let mut append: String = String::from("");
 
-        for (wi, wd) in parts {
+        for i in 0..last {
+            let wd = parts[i];
             let [mut min, mut max]: [char; 2] = [' ', ' '];
 
             if wd.len() > 0 {
@@ -86,14 +87,14 @@ pub fn parse_csv(lines: &Vec<String>) -> Box<Vec<Vec<String>>> {
                     words.push(auto_trim(&append, true, true).to_string());
                     append = String::new();
                 }
-                else if wi == last {
+                else if i == last {
                     words.push(auto_trim(&append, true, end).to_string());
                 }
 
                 continue;
             }
 
-            if beg && !end && wi != last {
+            if beg && !end && i != last {
                 append = String::from(wd);
                 continue;
             }

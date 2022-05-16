@@ -27,10 +27,11 @@ fn cx_array<'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<
 
 fn cx_object <'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<'a, JsArray> {
     let rows: Handle<JsArray> = cx.empty_array();
+    let empty = vec![];
 
     let head =
-        if vec.len() > 0    { vec[0].clone() }
-        else                { Vec::new() };
+        if vec.len() > 0    { &vec[0] }
+        else                { &empty };
 
     let rl: usize = vec.len();
     let hl: usize = head.len();
