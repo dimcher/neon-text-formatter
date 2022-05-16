@@ -7,7 +7,7 @@ use std::{fs::File, io::{Read, Write}, {thread}};
 
 const EOL: &str = "\r\n";
 const QUOTE: char = '"';
-const THSIZE: usize = 100000;
+const THSIZE: usize = 200000;
 
 fn min_max(word: &str) -> Box<[char; 2]> {
     let w: Vec<char> = word.chars().collect();

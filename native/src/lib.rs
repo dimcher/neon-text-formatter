@@ -39,7 +39,7 @@ fn cx_object <'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResul
         let obj: Handle<JsObject> = cx.empty_object();
 
         for hi in 0..hl {
-            let val = cx.string(vec[ri][hi].clone());
+            let val = cx.string(&vec[ri][hi]);
             obj.set(cx, head[hi].as_ref(), val)?;
         }
 
