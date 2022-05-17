@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+pub const TAB: &str = "\t";
+pub const PIPE: &str = "|";
 pub const COMMA: &str = ",";
 
 pub struct FileFormats {
@@ -10,9 +12,9 @@ impl FileFormats {
     pub fn new() -> Self {
         Self {
             map: HashMap::from([
+                ("tsv", TAB),
+                ("psv", PIPE),
                 ("csv", COMMA),
-                ("tsv", "\t"),
-                ("psv", "|"),
             ])
 
         }
@@ -22,8 +24,8 @@ impl FileFormats {
         &self.map
     }
 
-
-    pub fn file_delim<'a>(&self, mode: &str) -> &str {
+    #[allow(dead_code)]
+    pub fn get_delim<'a>(&self, mode: &str) -> &str {
         let map = self.get_map();
         map.get(mode).unwrap_or(&COMMA)
     }

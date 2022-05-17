@@ -111,12 +111,10 @@ fn convfile(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let source: &str = &i.value(); 
     let target: &str = &o.value();
 
-    let map = FileFormats::new();
     let data = file_array(&source);
     let ttype = file_type(&target);
-    let delim = map.file_delim(&ttype);
 
-    let text = conv_data(&data, &delim);
+    let text = conv_data(&data, &ttype);
     let size: usize = write_file(target, &text);
 
     Ok(cx.number(size as f64))
@@ -131,12 +129,10 @@ fn convtext<'a>(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let delim: &str = &d.value(); 
     let target: &str = &o.value();
 
-    let map = FileFormats::new();
     let data = parse_text(text, delim);
     let ttype = file_type(&target);
-    let delim = map.file_delim(&ttype);
 
-    let text = conv_data(&data, &delim);
+    let text = conv_data(&data, &ttype);
     let size: usize = write_file(target, &text);
 
     Ok(cx.number(size as f64))

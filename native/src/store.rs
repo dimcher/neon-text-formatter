@@ -155,18 +155,37 @@ pub fn file_array(file: &str) -> Box<Vec<Vec<String>>> {
     let fmt = file_type(file);
     let data = read_file(file);
     let map = FileFormats::new();
-    let delim = map.file_delim(&fmt);
+    let delim = map.get_delim(&fmt);
 
     parse_text(&data, &delim)
 }
 
-pub fn conv_data<'a>(data: &Vec<Vec<String>>, delim: &str) -> Box<String> {
+pub fn conv_data<'a>(data: &Vec<Vec<String>>, key: &str) -> Box<String> {
+    let map = FileFormats::new();
+    let dlm = map.get_delim(key);
     let len = data.len();
     let mut arr: Vec<String> = Vec::new();
 
-    for i in 0..len {
-        arr.push(data[i].join(&delim.to_string()));
+    if key == "csv" {
+        for i in 0..len {
+            let mut line: Vec<String> = Vec::new();
+
+            for j in 0..data[i].len() {
+                let mut s: String = QUOTE.to_string();
+                    s.push_str(&data[i][j]);
+                    s.push(QUOTE);
+
+                line.push(s);
+            }
+
+            arr.push(line.join(&dlm.to_string()));
+        }
     }
-    
+    else {
+        for i in 0..len {
+            arr.push(data[i].join(&dlm.to_string()));
+        }
+    }
+
     Box::new(arr.join(EOL))
 }
