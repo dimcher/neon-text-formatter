@@ -5,7 +5,6 @@ mod formats;
 use formats::*;
 
 use neon::prelude::*;
-//use neon::handle::*;
 
 fn cx_array<'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<'a, JsArray> {
     let rows: Handle<JsArray> = cx.empty_array();
@@ -142,24 +141,10 @@ fn convtext<'a>(mut cx: FunctionContext) -> JsResult<JsNumber> {
 
     Ok(cx.number(size as f64))
 }
-/* 
-fn dimcher<'a>(mut cx: FunctionContext) -> JsResult<JsNumber> {
-    let a: Handle<JsString> = cx.argument(0)?;
-    let b: Handle<JsString> = cx.argument(1)?;
-
-    let filename = a.value();
-    let callback = cx.argument::<JsFunction>(1)?.Root.root(&mut cx);
-
-//    println!("{:?}", c);
-
-    Ok(cx.number(3 as f64))
-}
- */
 
 register_module!(mut cx, {
     println!("Register Rust Methods...");
 
-//    cx.export_function("dimcher", dimcher)?;
     cx.export_function("convFile", convfile)?;
     cx.export_function("convText", convtext)?;
     cx.export_function("readText", readtext)?;
