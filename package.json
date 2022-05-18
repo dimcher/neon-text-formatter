@@ -1,8 +1,8 @@
 {
-  "name": "neon",
+  "name": "text-db-package",
   "version": "0.1.0",
-  "description": "",
-  "main": "lib/index.js",
+  "description": "NPM text data format coverter package based on Rust",
+  "main": "index.js",
   "author": "Dima Chernyshev <dimcher@gmail.com>",
   "license": "MIT",
   "dependencies": {
@@ -10,5 +10,9 @@
   },
   "scripts": {
     "install": "neon build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dimcher/text-db-package.git"
   }
 }
