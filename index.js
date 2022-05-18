@@ -1,5 +1,5 @@
 const dimcher = () => {
-    console.log(".........DIMCHER test........");
+    console.log(".........DIMCHER testing........");
 }
 
 module.exports = dimcher
