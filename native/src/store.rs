@@ -171,11 +171,7 @@ pub fn conv_data<'a>(data: &Vec<Vec<String>>, key: &str) -> Box<String> {
             let mut line: Vec<String> = Vec::new();
 
             for j in 0..data[i].len() {
-                let mut s: String = QUOTE.to_string();
-                    s.push_str(&data[i][j]);
-                    s.push(QUOTE);
-
-                line.push(s);
+                line.push(format!("{}{}{}", QUOTE, data[i][j], QUOTE));
             }
 
             arr.push(line.join(&dlm.to_string()));
