@@ -22,21 +22,37 @@ pub fn file_type<'a>(file: &'a str) -> &'a str {
     &file[mat.start()..mat.end()]
 }
 
-pub fn read_file<'a>(name: &str) -> Box<String> {
-    let mut file = File::open(name).unwrap();
-    let mut contents = String::new();
+pub fn read_file(name: &str) -> Box<String> {
+    let f = File::open(name);
+    let mut s = String::new();
 
-    file.read_to_string(&mut contents).unwrap();
+    let mut f = match f {
+        Ok(file) => file,
+        Err(_err) => return Box::new(s),
+    };
 
-    Box::new(contents)
+    let cont = match f.read_to_string(&mut s) {
+        Ok(_) => s,
+        Err(_err) => String::new(),
+    };
+
+    Box::new(cont)
 }
 
 pub fn write_file(file: &str, data: &str) -> usize {
-    let mut file = File::create(file).unwrap();
-    let data = data.as_bytes();
-    file.write_all(data).unwrap();
+    let f = File::create(file);
 
-    data.len()
+    let mut f = match f {
+        Ok(file) => file,
+        Err(_err) => return 0,
+    };
+
+    let data = data.as_bytes();
+
+    match f.write_all(data) {
+        Ok(_) => return data.len(),
+        Err(_err) => return 0,
+    };
 }
 
 fn auto_trim (text: &str, beg: bool, end: bool) -> Box<String> {
