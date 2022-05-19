@@ -1,6 +1,6 @@
 {
   "name": "@dimcher/neon-text-formatter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "NPM package for text formating extended with Rust module",
   "main": "index.js",
   "author": "Dima Chernyshev <dimcher@gmail.com>",
