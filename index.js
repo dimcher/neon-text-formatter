@@ -1,4 +1,4 @@
-const addon = require('./native');
+const addon = require('./neon/native');
 
 const fileTypes = () =>{
     return addon.fileTypes();

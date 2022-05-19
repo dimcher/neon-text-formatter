@@ -1,9 +1,10 @@
 cargo.lock
 package-lock.json
 
-native/target
-native/index.node
-native/artifacts.json
+neon/native/target
+neon/native/index.node
+neon/native/artifacts.json
+
 **/*~
 **/node_modules
 **/.DS_Store

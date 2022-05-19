@@ -1,4 +1,4 @@
-const addon = require('../native');
+const addon = require('../neon/native');
 const isodates = require("./iso-dates");
 
 const filepath = "c:\\temp\\test";

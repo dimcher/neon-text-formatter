@@ -1,4 +1,7 @@
-native/src
-native/target
-native/cargo.*
-native/build.rs
+neon/package.json
+
+neon/native/src
+neon/native/target
+neon/native/cargo.*
+neon/native/build.rs
+neon/native/artifacts.json

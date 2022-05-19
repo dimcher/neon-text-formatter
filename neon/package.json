@@ -1,12 +1,15 @@
 {
-  "name": "@dimcher/text-formatter",
-  "version": "0.1.2",
-  "description": "NPM text formatter package extended with Rust",
+  "name": "neon-text-formatter",
+  "version": "0.1.0",
+  "description": "NPM text formatter Rust extension",
   "main": "index.js",
   "author": "Dima Chernyshev <dimcher@gmail.com>",
   "license": "MIT",
   "dependencies": {
     "neon-cli": "^0.1.0"
+  },
+  "scripts": {
+    "install": "neon build"
   },
   "repository": {
     "type": "git",
