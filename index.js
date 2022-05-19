@@ -5,7 +5,7 @@ const fileTypes = () =>{
 };
 
 const convFile = (source, target) => {
-    return addon.convFile(infile, outfile);
+    return addon.convFile(source, target);
 };
 
 const convText = (text, target, delim) => {

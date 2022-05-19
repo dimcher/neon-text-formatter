@@ -1,7 +1,7 @@
 {
-  "name": "text-formatter",
+  "name": "@dimcher/text-formatter",
   "version": "0.1.0",
-  "description": "NPM text formatter package based extended with Rust",
+  "description": "NPM text formatter package extended with Rust",
   "main": "index.js",
   "author": "Dima Chernyshev <dimcher@gmail.com>",
   "license": "MIT",

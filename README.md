@@ -1,2 +1,7 @@
-# Text parser/formatter for TSV, CSV, PSV
-# Test version extended with Rust Neon extension
+# What is this?
+
+Text parser/formatter for TSV, CSV, PSV
+
+# Details
+
+Test version extended with Rust Neon package
