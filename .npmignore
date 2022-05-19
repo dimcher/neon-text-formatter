@@ -1,3 +1,4 @@
 native/src
-native/target/cargo.*
-native/target/build.rs
+native/target
+native/cargo.*
+native/build.rs
