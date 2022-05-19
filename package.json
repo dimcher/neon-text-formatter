@@ -1,7 +1,7 @@
 {
-  "name": "text-db-package",
+  "name": "text-formatter",
   "version": "0.1.0",
-  "description": "NPM text data format coverter package based on Rust",
+  "description": "NPM text formatter package based extended with Rust",
   "main": "index.js",
   "author": "Dima Chernyshev <dimcher@gmail.com>",
   "license": "MIT",
@@ -13,6 +13,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dimcher/text-db-package.git"
+    "url": "git+https://github.com/dimcher/text-formatter.git"
   }
 }

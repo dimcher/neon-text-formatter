@@ -76,6 +76,7 @@ fn readobject(mut cx: FunctionContext) -> JsResult<JsArray> {
 
 fn readtext(mut cx: FunctionContext) -> JsResult<JsString> {
     let name: Handle<JsString> = cx.argument(0)?;
+    
     let file: String = name.value() as String;
     let data = read_file(&file);
     
