@@ -1,7 +1,7 @@
 {
-  "name": "@dimcher/text-formatter",
-  "version": "0.1.2",
-  "description": "NPM text formatter package extended with Rust",
+  "name": "@dimcher/neon-text-formatter",
+  "version": "0.1.0",
+  "description": "NPM package for text formating extended with Rust module",
   "main": "index.js",
   "author": "Dima Chernyshev <dimcher@gmail.com>",
   "license": "MIT",
@@ -10,6 +10,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dimcher/text-formatter.git"
+    "url": "git+https://github.com/dimcher/neon-text-formatter.git"
   }
 }
