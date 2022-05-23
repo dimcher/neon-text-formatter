@@ -1,11 +1,12 @@
 "use strict";
 
 const path = require("path");
-
 const addon = require('../neon/native');
 
-let input = path.resolve("../samples/data.csv");
-let output = path.resolve("../samples/data.tsv");
+const file = path.resolve(__dirname, "../samples/data");
+
+const input = `${file}.csv`;
+const output = `${file}.tsv`;
 
 const readArray = async(i) => {
     return new Promise((resolve, reject) => {
