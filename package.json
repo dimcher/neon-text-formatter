@@ -5,11 +5,26 @@
   "main": "index.js",
   "author": "Dima Chernyshev <dimcher@gmail.com>",
   "license": "MIT",
-  "dependencies": {
-    "neon-cli": "^0.1.0"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dimcher/neon-text-formatter.git"
+  },
+  "scripts": {
+    "start": "ts-node index.js",
+    "build": "tsc",
+    "test": "jest"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run test"
+    }
+  },
+  "dependencies": {
+    "neon-cli": "^0.1.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.15.0",
+    "husky": "^8.0.1",
+    "jest": "^28.1.0"
   }
 }

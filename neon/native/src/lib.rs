@@ -54,7 +54,7 @@ fn cx_object <'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResul
     Ok(rows)
 }
 
-fn readarray(mut cx: FunctionContext) -> JsResult<JsArray> {
+fn filearray(mut cx: FunctionContext) -> JsResult<JsArray> {
     let s: Handle<JsString> = cx.argument(0)?;
 
     let source: String = s.value() as String; 
@@ -64,7 +64,7 @@ fn readarray(mut cx: FunctionContext) -> JsResult<JsArray> {
     cx_array(&data, &mut cx)
 }
 
-fn readobject(mut cx: FunctionContext) -> JsResult<JsArray> {
+fn fileobject(mut cx: FunctionContext) -> JsResult<JsArray> {
     let s: Handle<JsString> = cx.argument(0)?;
 
     let source: String = s.value() as String; 
@@ -125,7 +125,7 @@ fn convfile(mut cx: FunctionContext) -> JsResult<JsNumber> {
     Ok(cx.number(size as f64))
 }
 
-fn convtext<'a>(mut cx: FunctionContext) -> JsResult<JsNumber> {
+fn convtext(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let i: Handle<JsString> = cx.argument(0)?;
     let d: Handle<JsString> = cx.argument(1)?;
     let o: Handle<JsString> = cx.argument(2)?;
@@ -144,15 +144,17 @@ fn convtext<'a>(mut cx: FunctionContext) -> JsResult<JsNumber> {
 }
 
 register_module!(mut cx, {
-    println!("Register Rust Methods...");
+    let count: usize = 7;
 
     cx.export_function("convFile", convfile)?;
     cx.export_function("convText", convtext)?;
     cx.export_function("readText", readtext)?;
     cx.export_function("writeText", writetext)?;
     cx.export_function("fileTypes", filetypes)?;
-    cx.export_function("readArray", readarray)?;
-    cx.export_function("readObject", readobject)?;
+    cx.export_function("fileArray", filearray)?;
+    cx.export_function("fileObject", fileobject)?;
+
+    println!("Rust registered {} export Functions...", count);
 
     Ok(())
 });
