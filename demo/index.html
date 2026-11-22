@@ -92,7 +92,11 @@ const SAMPLES = [
 const $ = (id) => document.getElementById(id);
 
 const post = async (url, body) => {
-    const res = await fetch(url, { method: "POST", body: JSON.stringify(body) });
+    const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+    });
     const data = await res.json();
 
     if (!res.ok) {
@@ -127,6 +131,8 @@ const renderRows = (rows) => {
     $("rows").replaceChildren(table);
 };
 
+const clear = (id) => $(id).replaceChildren();
+
 const request = () => ({ text: $("input").value, delim: $("source").value });
 
 const run = async (work) => {
@@ -140,12 +146,14 @@ const run = async (work) => {
 };
 
 const parse = () => run(async () => {
+    clear("rows");
     const { rows } = await post("/api/parse", request());
 
     renderRows(rows);
 });
 
 const convert = () => run(async () => {
+    clear("output");
     const { output } = await post("/api/convert", { ...request(), target: $("target").value });
 
     $("output").textContent = output;

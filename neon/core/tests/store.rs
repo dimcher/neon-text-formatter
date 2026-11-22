@@ -108,6 +108,16 @@ fn convert_text_uses_the_given_delimiter() {
 }
 
 #[test]
+fn convert_text_rejects_a_delimiter_that_is_not_one_character() {
+    let target = temp_path("bad-delim.csv").to_string_lossy().into_owned();
+
+    for delim in ["", ",,"] {
+        assert!(convert_text("a,b", delim, &target).unwrap_err().starts_with("Delimiter must be one character"));
+    }
+    assert!(read_file(&target).is_err());
+}
+
+#[test]
 fn file_array_reports_an_unsupported_extension() {
     let file = temp_file("input.txt", "a,b");
 
