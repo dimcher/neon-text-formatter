@@ -53,15 +53,23 @@ fn parse_chunks(lines: &[String], delim: &str, size: usize) -> Vec<Vec<String>> 
     })
 }
 
+fn parse_records(lines: &[String], delim: &str, size: usize) -> Vec<Vec<String>> {
+    if lines.len() <= size {
+        return run_thread(lines, delim);
+    }
+
+    parse_chunks(lines, delim, size)
+}
+
+pub fn parse_text_sized(data: &str, delim: &str, size: usize) -> Vec<Vec<String>> {
+    parse_records(&split_records(data, delim), delim, size)
+}
+
 pub fn parse_text(data: &str, delim: &str) -> Vec<Vec<String>> {
     let lines = split_records(data, delim);
     let size = chunk_size(lines.len(), worker_count());
 
-    if lines.len() <= size {
-        return run_thread(&lines, delim);
-    }
-
-    parse_chunks(&lines, delim, size)
+    parse_records(&lines, delim, size)
 }
 
 pub fn file_array(file: &str) -> Result<Vec<Vec<String>>, String> {

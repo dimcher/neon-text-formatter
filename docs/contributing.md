@@ -2,7 +2,7 @@
 
 ## Setup
 
-You need Node 16 or newer and a Rust toolchain (`rustup`). Then:
+You need Node 20.19 or newer (the package itself runs on Node 16 or newer) and Rust 1.73 or newer (`rustup`). Then:
 
 ```
 npm install

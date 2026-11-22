@@ -10,11 +10,11 @@
 - Docs: a function table and format rules in the README, plus the format guide, architecture, testing, troubleshooting and contributing pages in `docs/`.
 
 ### Changed
-- Every function now throws a JS error when a file cannot be read or written, is not valid UTF-8, or has no extension. Before, these cases returned an empty string, an empty array or `0`.
+- Every function now throws a JS error when a file cannot be read or written or is not valid UTF-8. `readArray`, `readObject` and `convFile` also throw when a file name has no extension. Before, these cases returned an empty string, an empty array or `0`.
 - An extension other than csv, tsv or psv throws `Unsupported file type`. Before, such a file was read as CSV.
 - Writing TSV or PSV turns line breaks and delimiters inside a cell into spaces. Before, they broke the row.
 - A quote only opens a quoted field at the start of a field. A closing quote that is not followed by a comma or a line break makes the record fall back to one row per line, so a stray quote no longer swallows the lines after it.
-- The addon is built with Neon 1.1.2 (Node-API), so one build loads on any supported Node version. It needs Node 16 or newer.
+- The addon is built with Neon 1.1.2 (Node-API), so one build loads on any supported Node version. Using it needs Node 16 or newer and Rust 1.73 or newer. Running the tests needs Node 20.19 or newer.
 - Reading is faster. Chunk size follows the CPU count, small inputs skip the threads, the JS arrays are built row by row, and the Rust rows are freed on another thread. Reading 2 million rows takes about 1.5 s instead of 2.8 s on a 12-core laptop.
 - `readObject` builds each header key once instead of once per cell.
 - Dependencies: jest 30, eslint 10, husky 9.

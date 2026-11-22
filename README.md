@@ -32,7 +32,7 @@ readObject("people.csv");
 convFile("people.csv", "people.tsv");
 ```
 
-The addon uses Node-API, so one build loads on any supported Node version. Needs Node 16 or newer and a [Rust toolchain](https://rustup.rs). If something fails, see [Troubleshooting](https://github.com/dimcher/neon-text-formatter/blob/master/docs/troubleshooting.md).
+The addon uses Node-API, so one build loads on any supported Node version. Using the package needs Node 16 or newer and a [Rust toolchain](https://rustup.rs) (1.73 or newer). Running the tests needs Node 20.19 or newer, because of jest 30 and eslint 10. If something fails, see [Troubleshooting](https://github.com/dimcher/neon-text-formatter/blob/master/docs/troubleshooting.md).
 
 ## Live samples
 
@@ -171,14 +171,14 @@ Paste CSV, TSV or PSV text, then parse it or convert it. The page calls the real
 
 ## API
 
-All paths need a file extension: `csv`, `tsv` or `psv` (any letter case) for the readers and converters. Any other extension throws. Every function throws a JS error when a file cannot be read or written, when a file is not valid UTF-8, or when a file name has no extension. Before 0.2.0 these cases returned an empty string, an empty array or `0`.
+`readArray`, `readObject` and `convFile` need a file extension: `csv`, `tsv` or `psv` (any letter case). Any other extension throws. Every function throws a JS error when a file cannot be read or written or is not valid UTF-8, and `readArray`, `readObject` and `convFile` also throw when a file name has no extension. `readText` and `writeText` take any file name. Before 0.2.0 these cases returned an empty string, an empty array or `0`.
 
 | Function | Returns | What it does |
 |---|---|---|
 | `readArray(source)` | `string[][]` | Reads a file into rows of cells. Rows can have different lengths. |
 | `readObject(source)` | `object[]` | Uses the first row as keys. Each later row becomes an object. |
 | `convFile(source, target)` | `number` | Reads `source`, writes it to `target` in the format of the target extension. Returns the bytes written. |
-| `convText(text, target, delim)` | `number` | Parses `text` split on `delim` (`","`, `"\t"` or `"\|"`), writes it to `target`. Returns the bytes written. `delim` must be exactly one character. |
+| `convText(text, target, delim)` | `number` | Parses `text` split on `delim`, writes it to `target`. Returns the bytes written. `delim` must be exactly one character: `","`, `"\t"` and `"\|"` match the three formats, and any other single character such as `";"` also works. |
 | `readText(source)` | `string` | Reads a whole file as text. Any extension works. |
 | `writeText(text, target)` | `number` | Writes text to a file. Any extension works. Returns the bytes written. |
 | `fileTypes()` | `object` | `{ csv: ",", tsv: "\t", psv: "\|" }` |
@@ -221,7 +221,7 @@ This writes `a|b` and `1|2` to `out.psv`.
 
 ## Build and test
 
-Needs Node 16 or newer and a Rust toolchain.
+Using the package needs Node 16 or newer and Rust 1.73 or newer. Running the tests needs Node 20.19 or newer.
 
 | Command | What it does |
 |---|---|

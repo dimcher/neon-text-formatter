@@ -1,6 +1,6 @@
 # Testing
 
-There are three sets of tests. `npm run test:all` runs them all.
+There are five sets of tests. `npm run test:all` runs them all.
 
 | Set | Where | Needs the addon? | What it covers |
 |---|---|---|---|

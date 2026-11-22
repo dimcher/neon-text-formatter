@@ -475,3 +475,23 @@ fn parse_text_keeps_row_order_when_split_into_several_chunks() {
     assert_eq!(rows.len(), 90000);
     assert!(rows.iter().enumerate().all(|(n, row)| row[0] == n.to_string()));
 }
+
+#[test]
+fn parse_text_sized_keeps_multi_line_quoted_records_whole_across_chunks() {
+    let text = (0..50)
+        .map(|n| format!("\"line {n}\nsecond {n}\",{n}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let rows = parse_text_sized(&text, ",", 3);
+
+    assert_eq!(rows.len(), 50);
+    assert!(rows.iter().enumerate().all(|(n, row)| row == &vec![format!("line {n}\nsecond {n}"), n.to_string()]));
+}
+
+#[test]
+fn parse_text_sized_matches_the_single_chunk_result() {
+    let text = (0..200).map(|n| format!("{n},\"a,{n}\",x")).collect::<Vec<_>>().join("\n");
+
+    assert_eq!(parse_text_sized(&text, ",", 7), parse_text_sized(&text, ",", 100000));
+}
