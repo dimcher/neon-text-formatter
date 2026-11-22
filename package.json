@@ -10,23 +10,42 @@
     "url": "git+https://github.com/dimcher/neon-text-formatter.git"
   },
   "scripts": {
-    "start": "ts-node index.js",
-    "build": "tsc",
-    "build:native": "node scripts/build-native.js",
+    "build:native": "napi build --platform --release --manifest-path rust/napi/Cargo.toml --output-dir . --js binding.js --dts binding.d.ts",
     "demo": "node demo/server.js",
     "test": "jest",
-    "test:rust": "cargo test -p text-formatter-core --manifest-path neon/Cargo.toml",
+    "test:rust": "cargo test -p text-formatter-core --manifest-path rust/Cargo.toml",
     "test:all": "npm run build:native && npm run test:rust && REQUIRE_ADDON=1 jest",
     "prepare": "husky || true",
     "samples": "node scripts/readme-samples.js",
-    "samples:write": "node scripts/readme-samples.js --write"
+    "samples:write": "node scripts/readme-samples.js --write",
+    "artifacts": "napi artifacts",
+    "prepublishOnly": "napi prepublish -t npm"
   },
   "devDependencies": {
     "eslint": "^10.15.0",
     "husky": "^9.1.7",
-    "jest": "^30.5.2"
+    "jest": "^30.5.2",
+    "@napi-rs/cli": "^3.10.12"
   },
   "engines": {
     "node": ">=16"
-  }
+  },
+  "napi": {
+    "binaryName": "text-formatter",
+    "targets": [
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-pc-windows-msvc"
+    ]
+  },
+  "files": [
+    "index.js",
+    "binding.js",
+    "binding.d.ts",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ]
 }

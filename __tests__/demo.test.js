@@ -4,16 +4,16 @@ const fs = require("fs");
 const http = require("http");
 const path = require("path");
 
-const addonBuilt = fs.existsSync(path.resolve(__dirname, "../neon/native/index.node"));
+const { addonBuilt } = require("../test-support/addon");
 const describeWithAddon = addonBuilt ? describe : describe.skip;
 
 if (process.env.REQUIRE_ADDON === "1") {
-    it("has a built neon/native/index.node (REQUIRE_ADDON=1)", () => {
+    it("has a built the napi addon (*.node) (REQUIRE_ADDON=1)", () => {
         expect(addonBuilt).toBe(true);
     });
 }
 
-describeWithAddon("demo server (needs a built neon/native/index.node)", () => {
+describeWithAddon("demo server (needs a built the napi addon (*.node))", () => {
     let server;
     let base;
 

@@ -3,7 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const addonBuilt = fs.existsSync(path.resolve(__dirname, "../neon/native/index.node"));
+const { addonBuilt } = require("../test-support/addon");
 const describeWithAddon = addonBuilt ? describe : describe.skip;
 
 describeWithAddon("README live samples", () => {

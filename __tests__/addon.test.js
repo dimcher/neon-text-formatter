@@ -4,8 +4,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const addonPath = path.resolve(__dirname, "../neon/native/index.node");
-const addonBuilt = fs.existsSync(addonPath);
+const { addonBuilt } = require("../test-support/addon");
 const describeWithAddon = addonBuilt ? describe : describe.skip;
 
 if (!addonBuilt) {
@@ -13,14 +12,14 @@ if (!addonBuilt) {
 }
 
 if (process.env.REQUIRE_ADDON === "1") {
-    it("has a built neon/native/index.node (REQUIRE_ADDON=1)", () => {
+    it("has a built the napi addon (*.node) (REQUIRE_ADDON=1)", () => {
         expect(addonBuilt).toBe(true);
     });
 }
 
 const makeTempDir = () => fs.mkdtempSync(path.join(os.tmpdir(), "ntf-"));
 
-describeWithAddon("native addon (needs a built neon/native/index.node)", () => {
+describeWithAddon("native addon (needs a built the napi addon (*.node))", () => {
     let api;
     let dir;
 
