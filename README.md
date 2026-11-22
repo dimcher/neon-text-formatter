@@ -26,7 +26,7 @@ Every function throws a JS error when a file cannot be read or written, when a f
 
 # Build and test
 
-Needs Node and a Rust toolchain.
+Needs Node 16 or newer and a Rust toolchain. The addon uses Node-API, so one built file loads on any supported Node version.
 
 `npm run build:native` builds the Rust addon and copies it to `neon/native/index.node`.
 
