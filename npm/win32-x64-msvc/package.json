@@ -1,0 +1,24 @@
+{
+  "name": "@dimcher/neon-text-formatter-win32-x64-msvc",
+  "version": "0.2.0",
+  "cpu": [
+    "x64"
+  ],
+  "main": "text-formatter.win32-x64-msvc.node",
+  "files": [
+    "text-formatter.win32-x64-msvc.node"
+  ],
+  "description": "NPM package for text formating extended with Rust module",
+  "author": "Dima Chernyshev <dimcher@gmail.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dimcher/neon-text-formatter.git"
+  },
+  "os": [
+    "win32"
+  ]
+}
