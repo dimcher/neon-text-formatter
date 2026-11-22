@@ -6,6 +6,13 @@ use formats::*;
 
 use neon::prelude::*;
 
+fn or_throw<'a, T, C: Context<'a>>(result: Result<T, String>, cx: &mut C) -> NeonResult<T> {
+    match result {
+        Ok(value) => Ok(value),
+        Err(msg) => cx.throw_error(msg),
+    }
+}
+
 fn cx_array<'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<'a, JsArray> {
     let rows: Handle<JsArray> = cx.empty_array();
 
@@ -59,7 +66,7 @@ fn filearray(mut cx: FunctionContext) -> JsResult<JsArray> {
 
     let source: String = s.value() as String; 
 
-    let data = file_array(&source);
+    let data = or_throw(file_array(&source), &mut cx)?;
 
     cx_array(&data, &mut cx)
 }
@@ -69,7 +76,7 @@ fn fileobject(mut cx: FunctionContext) -> JsResult<JsArray> {
 
     let source: String = s.value() as String; 
 
-    let data = file_array(&source);
+    let data = or_throw(file_array(&source), &mut cx)?;
 
     cx_object(&data, &mut cx)
 }
@@ -78,9 +85,9 @@ fn readtext(mut cx: FunctionContext) -> JsResult<JsString> {
     let name: Handle<JsString> = cx.argument(0)?;
     
     let file: String = name.value() as String;
-    let data = read_file(&file);
+    let data = or_throw(read_file(&file), &mut cx)?;
     
-    Ok(cx.string(*data))
+    Ok(cx.string(data))
 }
 
 fn writetext(mut cx: FunctionContext) -> JsResult<JsNumber> {
@@ -90,7 +97,7 @@ fn writetext(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let file: &str = &o.value();
     let data: &str = &d.value();
 
-    let size = write_file(file, data);
+    let size = or_throw(write_file(file, data), &mut cx)?;
     
     Ok(cx.number(size as f64))
 }
@@ -116,11 +123,11 @@ fn convfile(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let source: &str = &i.value(); 
     let target: &str = &o.value();
 
-    let data = file_array(&source);
+    let data = or_throw(file_array(&source), &mut cx)?;
     let ttype = file_type(&target);
 
     let text = conv_data(&data, &ttype);
-    let size: usize = write_file(target, &text);
+    let size: usize = or_throw(write_file(target, &text), &mut cx)?;
 
     Ok(cx.number(size as f64))
 }
@@ -138,7 +145,7 @@ fn convtext(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let ttype = file_type(&target);
 
     let text = conv_data(&data, &ttype);
-    let size: usize = write_file(target, &text);
+    let size: usize = or_throw(write_file(target, &text), &mut cx)?;
 
     Ok(cx.number(size as f64))
 }

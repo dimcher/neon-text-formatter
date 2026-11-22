@@ -9,19 +9,19 @@ const convFile = (source, target) => {
     return addon.convFile(source, target);
 };
 const convText = (text, target, delim) => {
-    return addon.convText(text, target, delim);
+    return addon.convText(text, delim, target);
 };
 const readText = (source) => {
     return addon.readText(source);
 };
 const writeText = (text, target) => {
-    return addon.writeText(text, target);
+    return addon.writeText(target, text);
 };
 const readArray = (source) => {
-    return addon.readArray(source);
+    return addon.fileArray(source);
 };
 const readObject = (source) => {
-    return addon.readObject(source);
+    return addon.fileObject(source);
 };
 module.exports = {
     convFile,

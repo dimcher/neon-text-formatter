@@ -22,37 +22,24 @@ pub fn file_type<'a>(file: &'a str) -> &'a str {
     &file[mat.start()..mat.end()]
 }
 
-pub fn read_file(name: &str) -> Box<String> {
-    let f = File::open(name);
-    let mut s = String::new();
+pub fn read_file(name: &str) -> Result<String, String> {
+    let mut text = String::new();
 
-    let mut f = match f {
-        Ok(file) => file,
-        Err(_err) => return Box::new(s),
-    };
+    File::open(name)
+        .and_then(|mut f| f.read_to_string(&mut text))
+        .map_err(|err| format!("Cannot read {}: {}", name, err))?;
 
-    let cont = match f.read_to_string(&mut s) {
-        Ok(_) => s,
-        Err(_err) => String::new(),
-    };
-
-    Box::new(cont)
+    Ok(text)
 }
 
-pub fn write_file(file: &str, data: &str) -> usize {
-    let f = File::create(file);
+pub fn write_file(file: &str, data: &str) -> Result<usize, String> {
+    let bytes = data.as_bytes();
 
-    let mut f = match f {
-        Ok(file) => file,
-        Err(_err) => return 0,
-    };
+    File::create(file)
+        .and_then(|mut f| f.write_all(bytes))
+        .map_err(|err| format!("Cannot write {}: {}", file, err))?;
 
-    let data = data.as_bytes();
-
-    match f.write_all(data) {
-        Ok(_) => return data.len(),
-        Err(_err) => return 0,
-    };
+    Ok(bytes.len())
 }
 
 fn auto_trim (text: &str, beg: bool, end: bool) -> Box<String> {
@@ -167,13 +154,13 @@ pub fn parse_text(data: &str, delim: &str) -> Box<Vec<Vec<String>>> {
     Box::new(vec)
 }
 
-pub fn file_array(file: &str) -> Box<Vec<Vec<String>>> {
+pub fn file_array(file: &str) -> Result<Box<Vec<Vec<String>>>, String> {
     let fmt = file_type(file);
-    let data = read_file(file);
+    let data = read_file(file)?;
     let map = FileFormats::new();
     let delim = map.get_delim(&fmt);
 
-    parse_text(&data, &delim)
+    Ok(parse_text(&data, &delim))
 }
 
 pub fn conv_data<'a>(data: &Vec<Vec<String>>, key: &str) -> Box<String> {
