@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text Formatter Demo</title>
+<style>
+:root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #1d2330;
+    --muted: #5b6475;
+    --line: #d5dae3;
+    --accent: #2457d6;
+    --bad: #b3261e;
+    --card: #f5f7fb;
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #14171f;
+        --fg: #e6e9f0;
+        --muted: #9aa3b5;
+        --line: #2c3342;
+        --accent: #7da2ff;
+        --bad: #ff8a80;
+        --card: #1c2029;
+    }
+}
+body { margin: 0; padding: 24px 16px; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; }
+main { max-width: 880px; margin: 0 auto; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+p.lead { margin: 0 0 20px; color: var(--muted); }
+textarea { width: 100%; box-sizing: border-box; min-height: 150px; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); font: 14px/1.4 ui-monospace, monospace; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 12px 0; }
+label { color: var(--muted); }
+select, button { padding: 7px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); font: inherit; }
+button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+#error { color: var(--bad); min-height: 1.5em; margin: 8px 0; }
+table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+th, td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; white-space: pre-wrap; }
+th { background: var(--card); }
+pre { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 10px; overflow-x: auto; white-space: pre-wrap; }
+h2 { font-size: 16px; margin: 20px 0 4px; }
+</style>
+</head>
+<body>
+<main>
+    <h1>Text Formatter Demo</h1>
+    <p class="lead">Paste CSV, TSV or PSV text. The native addon parses it or converts it to another format.</p>
+
+    <div class="row">
+        <label for="sample">Sample</label>
+        <select id="sample"></select>
+    </div>
+
+    <textarea id="input" aria-label="Input text" spellcheck="false"></textarea>
+
+    <div class="row">
+        <label for="source">Input format</label>
+        <select id="source">
+            <option value=",">csv</option>
+            <option value="&#9;">tsv</option>
+            <option value="|">psv</option>
+        </select>
+        <label for="target">Convert to</label>
+        <select id="target">
+            <option value="csv">csv</option>
+            <option value="tsv">tsv</option>
+            <option value="psv">psv</option>
+        </select>
+        <button id="parse" class="primary" type="button">Parse</button>
+        <button id="convert" type="button">Convert</button>
+    </div>
+
+    <div id="error" role="alert"></div>
+
+    <h2>Rows</h2>
+    <div id="rows" aria-live="polite"></div>
+
+    <h2>Converted output</h2>
+    <pre id="output" aria-live="polite"></pre>
+</main>
+<script>
+const SAMPLES = [
+    { name: "Simple csv", delim: ",", text: "name,age\nann,30\nbob,41" },
+    { name: "Multi-line quoted field", delim: ",", text: "name,note\n\"Ann\",\"line one\nline two\"\n\"Bob\",\"says \"\"hi\"\", ok\"" },
+    { name: "Tsv", delim: "\t", text: "name\tage\nann\t30\nbob\t41" },
+    { name: "Psv", delim: "|", text: "name|age\nann|30\nbob|41" },
+    { name: "Stray quote", delim: ",", text: "\"a\nb\n\"c\",d" }
+];
+
+const $ = (id) => document.getElementById(id);
+
+const post = async (url, body) => {
+    const res = await fetch(url, { method: "POST", body: JSON.stringify(body) });
+    const data = await res.json();
+
+    if (!res.ok) {
+        throw new Error(data.error);
+    }
+
+    return data;
+};
+
+const showError = (message) => {
+    $("error").textContent = message || "";
+};
+
+const cell = (tag, text) => {
+    const el = document.createElement(tag);
+
+    el.textContent = text;
+
+    return el;
+};
+
+const renderRows = (rows) => {
+    const table = document.createElement("table");
+
+    rows.forEach((row, index) => {
+        const tr = document.createElement("tr");
+
+        row.forEach((text) => tr.appendChild(cell(index === 0 ? "th" : "td", text)));
+        table.appendChild(tr);
+    });
+
+    $("rows").replaceChildren(table);
+};
+
+const request = () => ({ text: $("input").value, delim: $("source").value });
+
+const run = async (work) => {
+    showError("");
+
+    try {
+        await work();
+    } catch (err) {
+        showError(err.message);
+    }
+};
+
+const parse = () => run(async () => {
+    const { rows } = await post("/api/parse", request());
+
+    renderRows(rows);
+});
+
+const convert = () => run(async () => {
+    const { output } = await post("/api/convert", { ...request(), target: $("target").value });
+
+    $("output").textContent = output;
+});
+
+const loadSample = () => {
+    const sample = SAMPLES[Number($("sample").value)];
+
+    $("input").value = sample.text;
+    $("source").value = sample.delim;
+};
+
+const fillSamples = () => {
+    SAMPLES.forEach((sample, index) => {
+        $("sample").appendChild(new Option(sample.name, index));
+    });
+};
+
+fillSamples();
+loadSample();
+$("sample").addEventListener("change", loadSample);
+$("parse").addEventListener("click", parse);
+$("convert").addEventListener("click", convert);
+</script>
+</body>
+</html>
