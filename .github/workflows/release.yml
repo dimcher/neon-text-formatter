@@ -14,8 +14,8 @@ jobs:
         include:
           - { os: macos-latest, target: x86_64-apple-darwin }
           - { os: macos-latest, target: aarch64-apple-darwin }
-          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu }
-          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu }
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu, flags: --use-napi-cross }
+          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, flags: --use-napi-cross }
           - { os: windows-latest, target: x86_64-pc-windows-msvc }
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +27,7 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       - run: npm ci
-      - run: npx napi build --platform --release --target ${{ matrix.target }} --manifest-path rust/napi/Cargo.toml --output-dir . --js binding.js --dts binding.d.ts
+      - run: npx napi build --platform --release --target ${{ matrix.target }} ${{ matrix.flags }} --manifest-path rust/napi/Cargo.toml --output-dir . --js binding.js --dts binding.d.ts
       - uses: actions/upload-artifact@v4
         with:
           name: bindings-${{ matrix.target }}
@@ -48,6 +48,8 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org
       - run: npm ci
+      - name: Tag matches package.json version
+        run: test "${GITHUB_REF_NAME#v}" = "$(node -p 'require("./package.json").version')"
       - uses: actions/download-artifact@v4
         with:
           path: artifacts

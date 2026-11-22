@@ -11,7 +11,17 @@ fn or_error<T>(result: std::result::Result<T, String>) -> Result<T> {
 }
 
 fn release(data: Vec<Vec<String>>) {
-    std::thread::spawn(move || drop(data));
+    let slot = std::sync::Arc::new(std::sync::Mutex::new(Some(data)));
+    let handed = std::sync::Arc::clone(&slot);
+    let spawned = std::thread::Builder::new().spawn(move || drop(take_rows(&handed)));
+
+    if spawned.is_err() {
+        drop(take_rows(&slot));
+    }
+}
+
+fn take_rows(slot: &std::sync::Mutex<Option<Vec<Vec<String>>>>) -> Option<Vec<Vec<String>>> {
+    slot.lock().ok().and_then(|mut rows| rows.take())
 }
 
 #[napi(js_name = "readText")]

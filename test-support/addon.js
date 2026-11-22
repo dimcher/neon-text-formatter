@@ -12,6 +12,7 @@ const loads = () => {
         require("../binding");
         return true;
     } catch (error) {
+        console.warn(`addon failed to load: ${error.message}`);
         return false;
     }
 };

@@ -14,18 +14,19 @@
     "demo": "node demo/server.js",
     "test": "jest",
     "test:rust": "cargo test -p text-formatter-core --manifest-path rust/Cargo.toml",
-    "test:all": "npm run build:native && npm run test:rust && REQUIRE_ADDON=1 jest",
+    "test:all": "npm run build:native && npm run test:rust && cross-env REQUIRE_ADDON=1 jest",
     "prepare": "husky || true",
     "samples": "node scripts/readme-samples.js",
     "samples:write": "node scripts/readme-samples.js --write",
     "artifacts": "napi artifacts",
-    "prepublishOnly": "napi prepublish -t npm"
+    "prepublishOnly": "napi prepublish -t npm --gh-release=false"
   },
   "devDependencies": {
+    "@napi-rs/cli": "^3.10.12",
+    "cross-env": "^10.1.0",
     "eslint": "^10.15.0",
     "husky": "^9.1.7",
-    "jest": "^30.5.2",
-    "@napi-rs/cli": "^3.10.12"
+    "jest": "^30.5.2"
   },
   "engines": {
     "node": ">=16"
@@ -47,5 +48,9 @@
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
-  ]
+  ],
+  "types": "binding.d.ts",
+  "publishConfig": {
+    "access": "public"
+  }
 }

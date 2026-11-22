@@ -18,6 +18,7 @@
 - The Rust code moved from `neon/` to `rust/` (`rust/core` and `rust/napi`). The built addon is a `.node` file in the repo root, next to a generated `binding.js` loader.
 - Prebuilt addons for macOS (x64, arm64), Linux (x64, arm64, glibc) and Windows (x64) are published as per-platform npm packages, so installing needs no Rust toolchain. A `v*` tag runs `.github/workflows/release.yml`.
 - GitHub Actions runs the tests on Linux, macOS and Windows with Node 20 and 22 on every pull request.
+- Errors thrown by the addon carry the napi-rs code `GenericFailure`, and a non-string argument throws a napi-rs conversion error instead of a Neon `TypeError`.
 - `readArray` is a little faster (about 1.6 s on 2 million rows) and `readObject` is the same (about 2.1 s).
 - Reading is faster. Chunk size follows the CPU count, small inputs skip the threads, the JS arrays are built row by row, and the Rust rows are freed on another thread. On a simpler 2 million row file, reading went from about 2.8 s to 1.5 s on a 12-core laptop.
 - `readObject` builds each header key once instead of once per cell.
