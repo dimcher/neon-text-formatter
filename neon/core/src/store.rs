@@ -254,6 +254,16 @@ pub fn file_array(file: &str) -> Result<Box<Vec<Vec<String>>>, String> {
     Ok(parse_text(&data, &delim))
 }
 
+fn flat_cell(cell: &str, delim: &str) -> String {
+    cell.replace("\r\n", " ").replace(['\r', '\n'], " ").replace(delim, " ")
+}
+
+fn join_flat_row(row: &Vec<String>, delim: &str) -> String {
+    let cells: Vec<String> = row.iter().map(|cell| flat_cell(cell, delim)).collect();
+
+    cells.join(delim)
+}
+
 pub fn conv_data<'a>(data: &Vec<Vec<String>>, key: &str) -> Box<String> {
     let map = FileFormats::new();
     let dlm = map.get_delim(key);
@@ -273,7 +283,7 @@ pub fn conv_data<'a>(data: &Vec<Vec<String>>, key: &str) -> Box<String> {
     }
     else {
         for i in 0..len {
-            arr.push(data[i].join(&dlm.to_string()));
+            arr.push(join_flat_row(&data[i], dlm));
         }
     }
 

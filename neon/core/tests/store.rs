@@ -204,6 +204,28 @@ fn conv_data_joins_tsv_and_psv_without_quotes() {
 }
 
 #[test]
+fn conv_data_turns_line_breaks_and_delimiters_in_tsv_cells_into_spaces() {
+    let data = rows(&[&["a\tb", "x\r\ny\nz"], &["1", "2"]]);
+
+    assert_eq!(*conv_data(&data, "tsv"), "a b\tx y z\r\n1\t2");
+}
+
+#[test]
+fn conv_data_keeps_commas_in_psv_cells_and_replaces_pipes() {
+    let data = rows(&[&["a,b", "c|d\ne"]]);
+
+    assert_eq!(*conv_data(&data, "psv"), "a,b|c d e");
+}
+
+#[test]
+fn a_multi_line_csv_converts_to_tsv_with_one_row_per_record() {
+    let data = parse_text("\"a\nb\",c\n1,2", COMMA);
+    let tsv = conv_data(&data, "tsv");
+
+    assert_eq!(*parse_text(&tsv, TAB), rows(&[&["a b", "c"], &["1", "2"]]));
+}
+
+#[test]
 fn conv_data_escapes_quotes_inside_csv_values() {
     let text = conv_data(&rows(&[&["say \"hi\""]]), "csv");
 
