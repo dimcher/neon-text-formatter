@@ -12,6 +12,8 @@ convFile("people.csv", "people.tsv");
 
 The addon is built for the machine it is built on. Install from a git clone and run `npm run build:native` (see [Build and test](#build-and-test)). The addon uses Node-API, so one build loads on any supported Node version.
 
+**Docs:** [Format guide](https://github.com/dimcher/neon-text-formatter/blob/master/docs/formats.md) · [Architecture](https://github.com/dimcher/neon-text-formatter/blob/master/docs/architecture.md) · [Testing](https://github.com/dimcher/neon-text-formatter/blob/master/docs/testing.md) · [Troubleshooting](https://github.com/dimcher/neon-text-formatter/blob/master/docs/troubleshooting.md) · [Contributing](https://github.com/dimcher/neon-text-formatter/blob/master/docs/contributing.md) · [Changelog](https://github.com/dimcher/neon-text-formatter/blob/master/CHANGELOG.md)
+
 ## API
 
 All paths need a file extension: `csv`, `tsv` or `psv` (any letter case) for the readers and converters. Any other extension throws. Every function throws a JS error when a file cannot be read or written, when a file is not valid UTF-8, or when a file name has no extension. Before 0.2.0 these cases returned an empty string, an empty array or `0`.
@@ -82,5 +84,9 @@ This needs a git clone of the repo; the npm package does not include the demo. R
 
 ## More
 
+- [Format guide](https://github.com/dimcher/neon-text-formatter/blob/master/docs/formats.md): how each format reads and writes, with real results for the odd cases.
 - [Architecture](https://github.com/dimcher/neon-text-formatter/blob/master/docs/architecture.md): how the code is laid out, how a read works, how threads are used, and how fast it is.
+- [Testing](https://github.com/dimcher/neon-text-formatter/blob/master/docs/testing.md): the test sets and how to run them.
+- [Troubleshooting](https://github.com/dimcher/neon-text-formatter/blob/master/docs/troubleshooting.md): build errors, load errors and common surprises.
 - [Contributing](https://github.com/dimcher/neon-text-formatter/blob/master/docs/contributing.md): branches, checks and code style.
+- [Changelog](https://github.com/dimcher/neon-text-formatter/blob/master/CHANGELOG.md)

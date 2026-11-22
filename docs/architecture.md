@@ -93,6 +93,8 @@ Where the time goes for `readArray`: about 14% reading and parsing in Rust, abou
 
 ## Known limits
 
+See also the [format guide](formats.md) and [troubleshooting](troubleshooting.md).
+
 - The whole file is read into memory, and every cell becomes its own string for a while. Plan for several times the file size in memory while reading a big file.
 - A column named `__proto__` is dropped by `readObject`.
 - A last row holding only one empty cell cannot round trip through TSV or PSV.
