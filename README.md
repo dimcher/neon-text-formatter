@@ -34,4 +34,4 @@ Needs Node and a Rust toolchain.
 
 `npm run test:rust` runs the Rust tests for the parsing and file code in `neon/core`.
 
-`npm run test:all` does all three. A quoted CSV field that spans several lines is a known limitation and is kept as an ignored Rust test.
+`npm run test:all` does all three. A quoted CSV field can span several lines.
