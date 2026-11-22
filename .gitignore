@@ -1,9 +1,6 @@
-package-lock.json
-
-neon/target
-neon/native/index.node
-neon/native/artifacts.json
-
 **/*~
 **/node_modules
 **/.DS_Store
+rust/target
+*.node
+artifacts.json

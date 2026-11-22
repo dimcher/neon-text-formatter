@@ -1,7 +1,7 @@
 "use strict";
 
 const path = require("path");
-const addon = require('../neon/native');
+const addon = require('../index');
 
 const file = path.resolve(__dirname, "../samples/data");
 
@@ -11,7 +11,7 @@ const output = `${file}.tsv`;
 const readArray = async(i) => {
     return new Promise((resolve, reject) => {
         try {
-            resolve(addon.fileArray(i))
+            resolve(addon.readArray(i))
         }
         catch (err) {
             reject(err);
@@ -22,7 +22,7 @@ const readArray = async(i) => {
 const readObject = async(i) => {
     return new Promise((resolve, reject) => {
         try {
-            resolve(addon.fileObject(i))
+            resolve(addon.readObject(i))
         }
         catch (err) {
             reject(err);

@@ -15,7 +15,7 @@ npm run test:all
 ## Before you open a pull request
 
 - `npm run test:all` passes. It builds the addon, runs the Rust tests, and runs the jest tests with the addon required.
-- New behavior has a test. Parsing and file code gets a Rust test in `neon/core/tests/`. Anything that crosses into JS gets a test in `__tests__/addon.test.js`.
+- New behavior has a test. Parsing and file code gets a Rust test in `rust/core/tests/`. Anything that crosses into JS gets a test in `__tests__/addon.test.js`.
 - Docs match the change. If a rule about reading or writing changes, update the format rules in the README.
 
 ## Branches and pull requests

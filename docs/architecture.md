@@ -3,8 +3,10 @@
 ## Layout
 
 ```
-index.js                 public JS API, a thin shim over the addon
-neon/
+index.js                 public JS API, re-exports the addon
+binding.js               generated loader: picks the right .node file for the platform
+binding.d.ts             generated TypeScript types
+rust/
   core/                  pure Rust crate: parsing, writing, file access. No Node code.
     src/formats.rs       the Format type (csv, tsv, psv) and its extension and delimiter
     src/io.rs            read_file, write_file, file_type
@@ -13,16 +15,17 @@ neon/
     src/write.rs         turn rows back into text for a format
     src/convert.rs       convert_file, convert_text
     tests/               store.rs (unit tests), roundtrip.rs (fuzz)
-  native/                the Neon addon: JS bindings only
+  napi/                  the napi-rs addon: JS bindings only
     src/lib.rs           reads arguments, calls core, builds JS values
-    index.node           the built addon (not in git)
-scripts/build-native.js  runs cargo and copies the library to neon/native/index.node
+npm/                     manifests of the per-platform packages (prebuilt addons)
+.github/workflows/       ci.yml (tests) and release.yml (prebuilt addons, publish)
+text-formatter.<platform>.node   the built addon in the repo root (not in git)
 demo/                    local browser demo (not published)
 __tests__/               jest tests: addon, wrapper (mocked), demo server
 samples/                 sample files and a small script
 ```
 
-The split matters. `core` has no dependencies and knows nothing about Node, so `cargo test` can cover all the parsing and file code without building the addon. `native` only moves values across the Node-API boundary.
+The split matters. `core` has no dependencies and knows nothing about Node, so `cargo test` can cover all the parsing and file code without building the addon. `napi` only moves values across the Node-API boundary.
 
 ## The JS shim
 
@@ -97,7 +100,7 @@ See also the [format guide](formats.md) and [troubleshooting](troubleshooting.md
 - The whole file is read into memory, and every cell becomes its own string for a while. Plan for several times the file size in memory while reading a big file.
 - A column named `__proto__` is dropped by `readObject`.
 - A last row holding only one empty cell cannot round trip through TSV or PSV.
-- The addon is a per-machine binary. Each platform needs its own `npm run build:native`.
+- The addon is a per-platform binary. Releases ship five prebuilt ones (macOS x64 and arm64, Linux x64 and arm64 glibc, Windows x64). Any other platform builds it with `npm run build:native`.
 - Reading and writing use the whole text at once. There is no streaming API.
 
 ## The demo server

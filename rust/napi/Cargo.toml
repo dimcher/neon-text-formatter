@@ -1,14 +1,17 @@
 [package]
-name = "text-formatter-native"
-version = "0.1.1"
+name = "text-formatter-napi"
+version = "0.2.0"
 authors = ["Dima Chernyshev <dimcher@gmail.com>"]
 license = "MIT"
 edition = "2021"
 
 [lib]
-name = "neon"
 crate-type = ["cdylib"]
 
 [dependencies]
-neon = "1.1.2"
+napi = { version = "3", default-features = false, features = ["napi4"] }
+napi-derive = "3"
 text-formatter-core = { path = "../core" }
+
+[build-dependencies]
+napi-build = "2"

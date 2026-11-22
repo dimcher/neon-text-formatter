@@ -1,18 +1,18 @@
 # Troubleshooting
 
-## `Cannot find module './neon/native'`
+## `Cannot find module './text-formatter.<platform>.node'`
 
-The addon is not built. It is a compiled file, `neon/native/index.node`, and it is not in git. Run `npm run build:native`. If that fails, see the next item.
+The addon is not built or not installed for your platform. From npm it comes as a platform package (`@dimcher/neon-text-formatter-<platform>`); check that optional dependencies were not turned off (`--no-optional`, `omit=optional`). In a git clone, run `npm run build:native`. If that fails, see the next item.
 
 ## `npm run build:native` fails
 
 - `spawnSync cargo ENOENT` or `cargo: command not found`: install the Rust toolchain from https://rustup.rs and open a new terminal. If `cargo` works in your shell, load its environment first (`. ~/.cargo/env`).
-- `Unsupported platform`: `scripts/build-native.js` knows macOS, Linux and Windows. Another platform needs a new entry in `libraryName`.
+- `Failed to load native binding`: no prebuilt addon matches your platform. Build it with `npm run build:native`.
 - A C compiler or linker error: install the platform build tools (Xcode command line tools on macOS, `build-essential` on Debian and Ubuntu, the Visual Studio build tools on Windows).
 
 ## The addon will not load on another machine
 
-The file is built for one platform and one CPU type. A file built on macOS will not load on Linux, and the reverse. The same Node version is not needed, because the addon uses Node-API. Build it again on the machine that runs it.
+A `.node` file is built for one platform and one CPU type. A file built on macOS will not load on Linux, and the reverse. The same Node version is not needed, because the addon uses Node-API. Install the package from npm there, or build it again on that machine.
 
 ## The addon tests are skipped
 
@@ -42,5 +42,5 @@ The whole file is read into memory and every cell is its own string. Plan for se
 
 - `Port 4321 is in use`: set another port, for example `PORT=4400 npm run demo`.
 - `PORT must be a whole number from 1 to 65535`: fix the value of `PORT`.
-- `Cannot find module './neon/native'`: build the addon first.
+- `Cannot find module './binding'` or a missing `.node` file: build the addon first.
 - The page opens but the buttons show an error such as `Cross-site requests are not allowed`: open it at `http://127.0.0.1:4321` or `http://localhost:4321`, not through another host name.

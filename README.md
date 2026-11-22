@@ -1,8 +1,8 @@
 # neon-text-formatter
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![node](https://img.shields.io/badge/node-%3E%3D16-339933) ![rust](https://img.shields.io/badge/built%20with-Rust%20%2B%20Neon-b7410e) ![tests](https://img.shields.io/badge/tests-Rust%20%2B%20jest-brightgreen)
+![license](https://img.shields.io/badge/license-MIT-blue) ![node](https://img.shields.io/badge/node-%3E%3D16-339933) ![rust](https://img.shields.io/badge/built%20with-Rust%20%2B%20napi--rs-b7410e) ![tests](https://img.shields.io/badge/tests-Rust%20%2B%20jest-brightgreen)
 
-Read and convert CSV, TSV and PSV (pipe separated) text from Node. The parsing is done by a Rust addon built with [Neon](https://neon-bindings.com), and it keeps the quote rules and error messages the same for every format. Where it helps most is converting: `convFile` is about 10 times faster than reading and writing with a pure-JS parser (see [Performance](#performance)).
+Read and convert CSV, TSV and PSV (pipe separated) text from Node. The parsing is done by a Rust addon built with [napi-rs](https://napi.rs), and it keeps the quote rules and error messages the same for every format. Where it helps most is converting: `convFile` is about 10 times faster than reading and writing with a pure-JS parser (see [Performance](#performance)).
 
 **Docs:** [Format guide](https://github.com/dimcher/neon-text-formatter/blob/master/docs/formats.md) · [Architecture](https://github.com/dimcher/neon-text-formatter/blob/master/docs/architecture.md) · [Testing](https://github.com/dimcher/neon-text-formatter/blob/master/docs/testing.md) · [Troubleshooting](https://github.com/dimcher/neon-text-formatter/blob/master/docs/troubleshooting.md) · [Contributing](https://github.com/dimcher/neon-text-formatter/blob/master/docs/contributing.md) · [Changelog](https://github.com/dimcher/neon-text-formatter/blob/master/CHANGELOG.md)
 
@@ -17,7 +17,11 @@ Read and convert CSV, TSV and PSV (pipe separated) text from Node. The parsing i
 
 ## Quick start
 
-The addon is built for the machine it is built on. Clone the repo, then:
+```
+npm install @dimcher/neon-text-formatter
+```
+
+The package ships prebuilt addons for macOS (Intel and Apple silicon), Linux (x64 and arm64, glibc) and Windows (x64), so installing does not need Rust. On another platform, clone the repo and build it yourself:
 
 ```
 npm install
@@ -32,7 +36,7 @@ readObject("people.csv");
 convFile("people.csv", "people.tsv");
 ```
 
-The addon uses Node-API, so one build loads on any supported Node version. Using the package needs Node 16 or newer and a [Rust toolchain](https://rustup.rs) (1.73 or newer). Running the tests needs Node 20.19 or newer, because of jest 30 and eslint 10. If something fails, see [Troubleshooting](https://github.com/dimcher/neon-text-formatter/blob/master/docs/troubleshooting.md).
+The addon uses Node-API, so one build loads on any supported Node version. Using the package needs Node 16 or newer. Building it yourself also needs a [Rust toolchain](https://rustup.rs) (1.73 or newer). Running the tests needs Node 20.19 or newer, because of jest 30 and eslint 10. If something fails, see [Troubleshooting](https://github.com/dimcher/neon-text-formatter/blob/master/docs/troubleshooting.md).
 
 ## Live samples
 
@@ -114,9 +118,9 @@ The format always comes from the file extension (any letter case). Details and o
 
 ```mermaid
 flowchart LR
-    A["Your Node code"] --> B["index.js<br/>thin shim"]
-    B --> C["Neon addon<br/>neon/native"]
-    C --> D["Rust core<br/>neon/core"]
+    A["Your Node code"] --> B["index.js<br/>binding.js loader"]
+    B --> C["napi-rs addon<br/>rust/napi"]
+    C --> D["Rust core<br/>rust/core"]
     D --> E["Read file<br/>pre-sized buffer"]
     E --> F["Split into records<br/>CSV quote scanner"]
     F --> G["Parse in threads<br/>ordered join"]
@@ -158,11 +162,14 @@ Plain reading is not faster than the best JS parsers. About 78% of a read goes t
 ## Project layout
 
 ```
-index.js                 public API, a thin shim over the addon
-neon/
+index.js                 public API, re-exports the addon
+binding.js, binding.d.ts generated loader and types (napi CLI)
+rust/
   core/                  pure Rust: parsing, writing, file access
-  native/                the Neon addon: JS bindings only
-scripts/                 build script and the README samples tool
+  napi/                  the napi-rs addon: JS bindings only
+npm/                     manifests of the per-platform packages
+.github/workflows/       CI and the release build
+scripts/                 the README samples tool
 demo/                    local browser demo (not published)
 samples/                 sample files
 docs/                    guides
@@ -238,9 +245,9 @@ Using the package needs Node 16 or newer and Rust 1.73 or newer. Running the tes
 
 | Command | What it does |
 |---|---|
-| `npm run build:native` | Builds the Rust addon and copies it to `neon/native/index.node`. |
+| `npm run build:native` | Builds the Rust addon with the napi CLI. The `.node` file and the loader go in the repo root. |
 | `npm test` | Runs the jest tests. The addon tests are skipped until the addon is built. With `REQUIRE_ADDON=1` they fail instead of skipping. |
-| `npm run test:rust` | Runs the Rust tests for the parsing and file code in `neon/core`. |
+| `npm run test:rust` | Runs the Rust tests for the parsing and file code in `rust/core`. |
 | `npm run test:all` | Builds the addon, then runs the Rust tests and the jest tests with `REQUIRE_ADDON=1`. |
 | `npm run demo` | Starts the browser demo (see below). |
 

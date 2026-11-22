@@ -1,0 +1,27 @@
+{
+  "name": "@dimcher/neon-text-formatter-darwin-x64",
+  "version": "0.2.0",
+  "cpu": [
+    "x64"
+  ],
+  "main": "text-formatter.darwin-x64.node",
+  "files": [
+    "text-formatter.darwin-x64.node"
+  ],
+  "description": "NPM package for text formating extended with Rust module",
+  "author": "Dima Chernyshev <dimcher@gmail.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dimcher/neon-text-formatter.git"
+  },
+  "os": [
+    "darwin"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
