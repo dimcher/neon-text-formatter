@@ -447,3 +447,31 @@ fn convert_file_turns_psv_into_a_csv_that_reads_back() {
     fs::remove_file(source).unwrap();
     fs::remove_file(target).unwrap();
 }
+
+#[test]
+fn chunk_size_never_goes_below_the_minimum() {
+    assert_eq!(chunk_size(0, 8), 20000);
+    assert_eq!(chunk_size(1000, 8), 20000);
+    assert_eq!(chunk_size(100000, 8), 20000);
+}
+
+#[test]
+fn chunk_size_splits_big_input_evenly_across_workers() {
+    assert_eq!(chunk_size(800000, 8), 100000);
+    assert_eq!(chunk_size(800001, 8), 100001);
+    assert!(800001_usize.div_ceil(chunk_size(800001, 8)) <= 8);
+}
+
+#[test]
+fn chunk_size_copes_with_zero_workers() {
+    assert_eq!(chunk_size(100000, 0), 100000);
+}
+
+#[test]
+fn parse_text_keeps_row_order_when_split_into_several_chunks() {
+    let text: String = (0..90000).map(|n| format!("{},x\n", n)).collect();
+    let rows = parse_text(&text, ",");
+
+    assert_eq!(rows.len(), 90000);
+    assert!(rows.iter().enumerate().all(|(n, row)| row[0] == n.to_string()));
+}

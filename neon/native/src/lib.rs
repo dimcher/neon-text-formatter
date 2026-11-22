@@ -22,17 +22,22 @@ fn size_result<'a, C: Context<'a>>(cx: &mut C, size: usize) -> JsResult<'a, JsNu
     Ok(cx.number(size as f64))
 }
 
+fn cx_cells<'a, C: Context<'a>>(row: &[String], cx: &mut C) -> JsResult<'a, JsArray> {
+    let cols = JsArray::new(cx, row.len());
+
+    for (ci, cd) in row.iter().enumerate() {
+        let value = cx.string(cd);
+        cols.set(cx, ci as u32, value)?;
+    }
+
+    Ok(cols)
+}
+
 fn cx_array<'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<'a, JsArray> {
-    let rows: Handle<JsArray> = cx.empty_array();
+    let rows = JsArray::new(cx, vec.len());
 
     for (ri, row) in vec.iter().enumerate() {
-        let cols: Handle<JsArray> = cx.empty_array();
-
-        for (ci, cd) in row.iter().enumerate() {
-            let value = cx.string(cd);
-            cols.set(cx, ci as u32, value)?;
-        }
-
+        let cols = cx.compute_scoped(|mut inner| cx_cells(row, &mut inner))?;
         rows.set(cx, ri as u32, cols)?;
     }
 
@@ -51,12 +56,12 @@ fn cx_row_object<'a, C: Context<'a>>(head: &[String], row: &[String], cx: &mut C
 }
 
 fn cx_object<'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<'a, JsArray> {
-    let rows: Handle<JsArray> = cx.empty_array();
+    let rows = JsArray::new(cx, vec.len().saturating_sub(1));
     let empty: Vec<String> = vec![];
     let head = vec.first().unwrap_or(&empty);
 
     for (ri, row) in vec.iter().enumerate().skip(1) {
-        let obj = cx_row_object(head, row, cx)?;
+        let obj = cx.compute_scoped(|mut inner| cx_row_object(head, row, &mut inner))?;
         rows.set(cx, (ri - 1) as u32, obj)?;
     }
 

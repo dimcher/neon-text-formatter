@@ -4,7 +4,7 @@ use crate::csv::{csv_records, parse_csv, trim_cr};
 use crate::formats::*;
 use crate::io::read_file;
 
-const THSIZE: usize = 200000;
+const MIN_CHUNK: usize = 20000;
 
 pub fn parse_data(lines: &[String], delim: &str) -> Vec<Vec<String>> {
     lines
@@ -29,12 +29,20 @@ fn run_thread(lines: &[String], delim: &str) -> Vec<Vec<String>> {
     parse_data(lines, delim)
 }
 
-pub fn parse_text(data: &str, delim: &str) -> Vec<Vec<String>> {
-    let lines = split_records(data, delim);
+fn worker_count() -> usize {
+    thread::available_parallelism().map_or(1, |count| count.get())
+}
 
+pub fn chunk_size(total: usize, workers: usize) -> usize {
+    let even = total.div_ceil(workers.max(1));
+
+    even.max(MIN_CHUNK)
+}
+
+fn parse_chunks(lines: &[String], delim: &str, size: usize) -> Vec<Vec<String>> {
     thread::scope(|scope| {
         let handles: Vec<_> = lines
-            .chunks(THSIZE)
+            .chunks(size)
             .map(|chunk| scope.spawn(move || run_thread(chunk, delim)))
             .collect();
 
@@ -43,6 +51,17 @@ pub fn parse_text(data: &str, delim: &str) -> Vec<Vec<String>> {
             .flat_map(|handle| handle.join().unwrap())
             .collect()
     })
+}
+
+pub fn parse_text(data: &str, delim: &str) -> Vec<Vec<String>> {
+    let lines = split_records(data, delim);
+    let size = chunk_size(lines.len(), worker_count());
+
+    if lines.len() <= size {
+        return run_thread(&lines, delim);
+    }
+
+    parse_chunks(&lines, delim, size)
 }
 
 pub fn file_array(file: &str) -> Result<Vec<Vec<String>>, String> {
