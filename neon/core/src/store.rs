@@ -1,6 +1,4 @@
-#[path = "./formats.rs"]
-mod formats;
-use formats::*;
+use crate::formats::*;
 
 use regex::Regex;
 use std::{fs::File, io::{Read, Write}, {thread}};

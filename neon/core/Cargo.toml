@@ -1,0 +1,9 @@
+[package]
+name = "text-formatter-core"
+version = "0.1.0"
+authors = ["Dima Chernyshev <dimcher@gmail.com>"]
+license = "MIT"
+edition = "2018"
+
+[dependencies]
+regex = "1.5.5"

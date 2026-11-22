@@ -12,7 +12,8 @@
   "scripts": {
     "start": "ts-node index.js",
     "build": "tsc",
-    "test": "jest"
+    "test": "jest",
+    "test:rust": "cargo test --manifest-path neon/core/Cargo.toml"
   },
   "husky": {
     "hooks": {

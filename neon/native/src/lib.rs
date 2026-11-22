@@ -1,8 +1,5 @@
-mod store;
-use store::*;
-
-mod formats;
-use formats::*;
+use text_formatter_core::formats::*;
+use text_formatter_core::store::*;
 
 use neon::prelude::*;
 

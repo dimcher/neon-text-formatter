@@ -5,3 +5,5 @@ neon/native/target
 neon/native/cargo.*
 neon/native/build.rs
 neon/native/artifacts.json
+neon/core
+__tests__
