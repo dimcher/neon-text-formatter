@@ -34,4 +34,8 @@ Needs Node 16 or newer and a Rust toolchain. The addon uses Node-API, so one bui
 
 `npm run test:rust` runs the Rust tests for the parsing and file code in `neon/core`.
 
-`npm run test:all` does all three. A quoted CSV field can span several lines. TSV and PSV have no quoting, so when a CSV is converted to them, tabs, pipes and line breaks inside a cell become spaces.
+`npm run test:all` does all three. Supported types are csv, tsv and psv (any letter case). Any other extension throws. A quoted CSV field can span several lines. TSV and PSV have no quoting, so when a CSV is converted to them, tabs, pipes and line breaks inside a cell become spaces.
+
+## Try it in a browser
+
+`npm run build:native`, then `npm run demo` and open http://127.0.0.1:4321. Paste CSV, TSV or PSV text, then parse it or convert it. The page calls the real addon through a small local server (`PORT` changes the port).

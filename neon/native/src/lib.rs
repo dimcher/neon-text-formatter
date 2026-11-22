@@ -1,5 +1,7 @@
+use text_formatter_core::convert::*;
 use text_formatter_core::formats::*;
-use text_formatter_core::store::*;
+use text_formatter_core::io::*;
+use text_formatter_core::read::*;
 
 use neon::prelude::*;
 
@@ -61,16 +63,20 @@ fn cx_object<'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult
     Ok(rows)
 }
 
+fn rows_arg(cx: &mut FunctionContext) -> NeonResult<Vec<Vec<String>>> {
+    let source = string_arg(cx, 0)?;
+
+    or_throw(file_array(&source), cx)
+}
+
 fn filearray(mut cx: FunctionContext) -> JsResult<JsArray> {
-    let source = string_arg(&mut cx, 0)?;
-    let data = or_throw(file_array(&source), &mut cx)?;
+    let data = rows_arg(&mut cx)?;
 
     cx_array(&data, &mut cx)
 }
 
 fn fileobject(mut cx: FunctionContext) -> JsResult<JsArray> {
-    let source = string_arg(&mut cx, 0)?;
-    let data = or_throw(file_array(&source), &mut cx)?;
+    let data = rows_arg(&mut cx)?;
 
     cx_object(&data, &mut cx)
 }
@@ -92,11 +98,10 @@ fn writetext(mut cx: FunctionContext) -> JsResult<JsNumber> {
 
 fn filetypes(mut cx: FunctionContext) -> JsResult<JsObject> {
     let obj: Handle<JsObject> = cx.empty_object();
-    let map = FileFormats::new();
 
-    for (k, v) in map.get_map() {
-        let key = cx.string(k);
-        let val = cx.string(v);
+    for format in Format::all() {
+        let key = cx.string(format.ext());
+        let val = cx.string(format.delim());
 
         obj.set(&mut cx, key, val)?;
     }
@@ -107,12 +112,7 @@ fn filetypes(mut cx: FunctionContext) -> JsResult<JsObject> {
 fn convfile(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let source = string_arg(&mut cx, 0)?;
     let target = string_arg(&mut cx, 1)?;
-
-    let data = or_throw(file_array(&source), &mut cx)?;
-    let ttype = or_throw(file_type(&target), &mut cx)?;
-
-    let text = conv_data(&data, ttype);
-    let size = or_throw(write_file(&target, &text), &mut cx)?;
+    let size = or_throw(convert_file(&source, &target), &mut cx)?;
 
     size_result(&mut cx, size)
 }
@@ -121,12 +121,7 @@ fn convtext(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let text = string_arg(&mut cx, 0)?;
     let delim = string_arg(&mut cx, 1)?;
     let target = string_arg(&mut cx, 2)?;
-
-    let data = parse_text(&text, &delim);
-    let ttype = or_throw(file_type(&target), &mut cx)?;
-
-    let out = conv_data(&data, ttype);
-    let size = or_throw(write_file(&target, &out), &mut cx)?;
+    let size = or_throw(convert_text(&text, &delim, &target), &mut cx)?;
 
     size_result(&mut cx, size)
 }

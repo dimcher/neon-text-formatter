@@ -8,6 +8,10 @@ const addonPath = path.resolve(__dirname, "../neon/native/index.node");
 const addonBuilt = fs.existsSync(addonPath);
 const describeWithAddon = addonBuilt ? describe : describe.skip;
 
+if (!addonBuilt) {
+    console.warn("addon tests skipped: run `npm run build:native` (or `npm run test:all`) to run them");
+}
+
 if (process.env.REQUIRE_ADDON === "1") {
     it("has a built neon/native/index.node (REQUIRE_ADDON=1)", () => {
         expect(addonBuilt).toBe(true);
@@ -147,6 +151,67 @@ describeWithAddon("native addon (needs a built neon/native/index.node)", () => {
         const file = write("multi.csv", "\"a\nb\",c\r\n1,2");
 
         expect(api.readArray(file)).toEqual([["a\nb", "c"], ["1", "2"]]);
+    });
+
+    it("readArray throws on an unsupported file type instead of guessing csv", () => {
+        const file = write("notes.txt", "a,b");
+
+        expect(() => api.readArray(file)).toThrow(/Unsupported file type/);
+    });
+
+    it("readArray reads an upper-case extension", () => {
+        const file = write("IN.TSV", "a\tb");
+
+        expect(api.readArray(file)).toEqual([["a", "b"]]);
+    });
+
+    it("readArray does not let a stray quote merge lines", () => {
+        const file = write("stray.csv", "\"a\nb\n\"c\",d");
+
+        expect(api.readArray(file)).toEqual([["a"], ["b"], ["c", "d"]]);
+    });
+
+    it("convFile flattens line breaks when the target is tsv", () => {
+        const source = write("multi.csv", "\"a\nb\",c");
+        const target = path.join(dir, "out.tsv");
+
+        api.convFile(source, target);
+
+        expect(fs.readFileSync(target, "utf8")).toBe("a b\tc");
+    });
+
+    it("fileTypes lists the three delimiters", () => {
+        expect(api.fileTypes()).toEqual({ csv: ",", tsv: "\t", psv: "|" });
+    });
+
+    it("readArray keeps non-ascii text around a multi-line field", () => {
+        const file = write("uni.csv", "é,\"ü\nñ\"\n日本,語");
+
+        expect(api.readArray(file)).toEqual([["é", "ü\nñ"], ["日本", "語"]]);
+    });
+
+    it("readObject skips cells that have no header and short rows", () => {
+        const file = write("ragged.csv", "a,b\n1\n2,3,4");
+
+        expect(api.readObject(file)).toEqual([{ a: "1" }, { a: "2", b: "3" }]);
+    });
+
+    it("convText reads csv text and writes a csv that reads back the same rows", () => {
+        const target = path.join(dir, "text.csv");
+
+        api.convText("\"a\nb\",\"say \"\"hi\"\"\"", target, ",");
+
+        expect(api.readArray(target)).toEqual([["a\nb", "say \"hi\""]]);
+    });
+
+    it("readArray returns 250000 rows in order across thread chunks", () => {
+        const text = Array.from({ length: 250000 }, (_, n) => `${n},x`).join("\n");
+        const file = write("big.csv", text);
+
+        const rows = api.readArray(file);
+
+        expect(rows).toHaveLength(250000);
+        expect(rows.every((row, n) => row[0] === String(n))).toBe(true);
     });
 
     it("readText throws on a missing file", () => {

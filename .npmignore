@@ -8,3 +8,4 @@ neon/native/cargo.*
 .husky
 neon/core
 __tests__
+demo
