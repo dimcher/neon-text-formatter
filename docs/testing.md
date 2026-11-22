@@ -48,4 +48,4 @@ api.readArray("/tmp/big.csv");
 console.log(Number(process.hrtime.bigint() - start) / 1e6, "ms");
 ```
 
-Run it with `node --trace-gc` to see how much time the garbage collector takes. On a 12-core laptop this file reads in about 1.5 s.
+Run it with `node --trace-gc` to see how much time the garbage collector takes. Compare with a pure-JS parser such as uDSV or d3-dsv on the same file, because plain reading is not faster than they are. See the [README](../README.md#performance).

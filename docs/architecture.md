@@ -73,14 +73,11 @@ Node-API values can only be created on the JS thread, so the build in step 6 can
 
 ## Speed
 
-Measured on a 12-core laptop with 2 million rows of 5 columns, quoted CSV, after a warm-up run. Treat these as rough.
+The full comparison with other libraries is in the [README](../README.md#performance). In short, on 2 million rows of quoted CSV on a 12-core laptop: `readArray` takes about 1.9 s, which is slower than uDSV (1.2 s) and d3-dsv (1.5 s), and `convFile` takes about 1.65 s, which is faster than reading and writing with those libraries (2.5 s and 2.8 s).
 
-| Call | Time |
-|---|---|
-| `readArray` | about 1.5 s |
-| `readObject` | about 2.0 s |
+Where the time goes for `readArray` (measured on a simpler test file): about 14% reading and parsing in Rust, about 78% building the JS arrays, and the rest freeing the rows. Building the JS arrays also makes V8 garbage collect many times. Running Node with a larger young generation, for example `node --max-semi-space-size=256`, can cut that on very large files. This was measured on one other test file and not on this repo's benchmark, so test it on your data.
 
-Where the time goes for `readArray`: about 14% reading and parsing in Rust, about 78% building the JS arrays, and the rest freeing the rows. Building the JS arrays also makes V8 garbage collect many times. Running Node with a larger young generation, for example `node --max-semi-space-size=256`, can cut that on very large files. This was measured on one other test file and not on this repo's benchmark, so test it on your data.
+Ideas not done yet: building the JS strings straight from the file buffer, and returning columns as one buffer plus offsets.
 
 ## Adding a format
 

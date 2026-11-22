@@ -15,7 +15,7 @@
 - Writing TSV or PSV turns line breaks and delimiters inside a cell into spaces. Before, they broke the row.
 - A quote only opens a quoted field at the start of a field. A closing quote that is not followed by a comma or a line break makes the record fall back to one row per line, so a stray quote no longer swallows the lines after it.
 - The addon is built with Neon 1.1.2 (Node-API), so one build loads on any supported Node version. Using it needs Node 16 or newer and Rust 1.73 or newer. Running the tests needs Node 20.19 or newer.
-- Reading is faster. Chunk size follows the CPU count, small inputs skip the threads, the JS arrays are built row by row, and the Rust rows are freed on another thread. Reading 2 million rows takes about 1.5 s instead of 2.8 s on a 12-core laptop.
+- Reading is faster. Chunk size follows the CPU count, small inputs skip the threads, the JS arrays are built row by row, and the Rust rows are freed on another thread. On a simpler 2 million row file, reading went from about 2.8 s to 1.5 s on a 12-core laptop.
 - `readObject` builds each header key once instead of once per cell.
 - Dependencies: jest 30, eslint 10, husky 9.
 
