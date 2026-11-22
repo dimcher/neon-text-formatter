@@ -60,6 +60,12 @@ describeWithAddon("demo server (needs a built neon/native/index.node)", () => {
         expect(res.status).toBe(400);
     });
 
+    it("answers the browser favicon request without an error", async () => {
+        const res = await fetch(base + "/favicon.ico");
+
+        expect(res.status).toBe(204);
+    });
+
     it("answers 404 for an unknown path", async () => {
         const res = await fetch(base + "/nope");
 

@@ -83,8 +83,17 @@ const sendPage = (res) => {
     res.end(fs.readFileSync(PAGE));
 };
 
+const sendNoContent = (res) => {
+    res.writeHead(204);
+    res.end();
+};
+
 const handle = (req, res) => {
     const route = ROUTES[`${req.method} ${req.url}`];
+
+    if (req.url === "/favicon.ico") {
+        return sendNoContent(res);
+    }
 
     if (route) {
         return runRoute(req, res, route);
