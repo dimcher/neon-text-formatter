@@ -100,6 +100,69 @@ Bob|Oslo|two lines
 
 Run `npm run samples` to see the same output on your machine. The `samples:` block above is written by `npm run samples:write`, and a test fails if it no longer matches the real addon output. More cases are in the [format guide](https://github.com/dimcher/neon-text-formatter/blob/master/docs/formats.md).
 
+## Supported formats
+
+| Format | Extension | Delimiter | Quoting on read | Quoting on write |
+|---|---|---|---|---|
+| CSV | `.csv` | `,` | Yes: commas, quotes and line breaks inside `"..."` | Every cell quoted, `"` doubled |
+| TSV | `.tsv` | tab | None | None: line breaks and tabs become spaces |
+| PSV | `.psv` | `\|` | None | None: line breaks and pipes become spaces |
+
+The format always comes from the file extension (any letter case). Details and odd cases are in the [format guide](https://github.com/dimcher/neon-text-formatter/blob/master/docs/formats.md).
+
+## How it works
+
+```mermaid
+flowchart LR
+    A["Your Node code"] --> B["index.js<br/>thin shim"]
+    B --> C["Neon addon<br/>neon/native"]
+    C --> D["Rust core<br/>neon/core"]
+    D --> E["Read file<br/>pre-sized buffer"]
+    E --> F["Split into records<br/>CSV quote scanner"]
+    F --> G["Parse in threads<br/>ordered join"]
+    G --> C
+    C --> H["JS arrays<br/>or objects"]
+    H --> A
+```
+
+- **The Rust core** has no Node code, so `cargo test` covers all parsing and file code on its own.
+- **The addon** only moves values across the Node-API boundary.
+- **Threads** are used only for big inputs. Small ones are parsed on the calling thread.
+
+The full walk-through is in [Architecture](https://github.com/dimcher/neon-text-formatter/blob/master/docs/architecture.md).
+
+## Performance
+
+Measured on a 12-core laptop, 2 million rows of 5 quoted columns, after a warm-up run. Treat these as rough.
+
+| Call | Time |
+|---|---|
+| `readArray` | about 1.5 s |
+| `readObject` | about 2.0 s |
+
+Most of the time (about 78%) goes to building the JS arrays, not to parsing. Parsing in Rust is about 14%.
+
+## Project layout
+
+```
+index.js                 public API, a thin shim over the addon
+neon/
+  core/                  pure Rust: parsing, writing, file access
+  native/                the Neon addon: JS bindings only
+scripts/                 build script and the README samples tool
+demo/                    local browser demo (not published)
+samples/                 sample files
+docs/                    guides
+__tests__/               jest tests
+```
+
+## Limits
+
+- The whole file is read into memory. There is no streaming API.
+- The addon is a per-machine binary: build it on each platform.
+- A column named `__proto__` is dropped by `readObject`.
+- A last row holding only one empty cell cannot round trip through TSV or PSV.
+
 ## Try it in a browser
 
 ![The demo page](docs/demo.png)
