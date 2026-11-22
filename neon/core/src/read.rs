@@ -6,22 +6,22 @@ use crate::io::read_file;
 
 const MIN_CHUNK: usize = 20000;
 
-pub fn parse_data(lines: &[String], delim: &str) -> Vec<Vec<String>> {
+pub fn parse_data<S: AsRef<str>>(lines: &[S], delim: &str) -> Vec<Vec<String>> {
     lines
         .iter()
-        .map(|line| line.split(delim).map(String::from).collect())
+        .map(|line| line.as_ref().split(delim).map(String::from).collect())
         .collect()
 }
 
-fn split_records(data: &str, delim: &str) -> Vec<String> {
+fn split_records<'a>(data: &'a str, delim: &str) -> Vec<&'a str> {
     if delim == COMMA {
         return csv_records(data);
     }
 
-    data.lines().map(|line| trim_cr(line).to_string()).collect()
+    data.lines().map(trim_cr).collect()
 }
 
-fn run_thread(lines: &[String], delim: &str) -> Vec<Vec<String>> {
+fn run_thread(lines: &[&str], delim: &str) -> Vec<Vec<String>> {
     if delim == COMMA {
         return parse_csv(lines);
     }
@@ -29,7 +29,7 @@ fn run_thread(lines: &[String], delim: &str) -> Vec<Vec<String>> {
     parse_data(lines, delim)
 }
 
-fn worker_count() -> usize {
+pub(crate) fn worker_count() -> usize {
     thread::available_parallelism().map_or(1, |count| count.get())
 }
 
@@ -39,7 +39,7 @@ pub fn chunk_size(total: usize, workers: usize) -> usize {
     even.max(MIN_CHUNK)
 }
 
-fn parse_chunks(lines: &[String], delim: &str, size: usize) -> Vec<Vec<String>> {
+fn parse_chunks(lines: &[&str], delim: &str, size: usize) -> Vec<Vec<String>> {
     thread::scope(|scope| {
         let handles: Vec<_> = lines
             .chunks(size)
@@ -53,7 +53,7 @@ fn parse_chunks(lines: &[String], delim: &str, size: usize) -> Vec<Vec<String>> 
     })
 }
 
-fn parse_records(lines: &[String], delim: &str, size: usize) -> Vec<Vec<String>> {
+fn parse_records(lines: &[&str], delim: &str, size: usize) -> Vec<Vec<String>> {
     if lines.len() <= size {
         return run_thread(lines, delim);
     }
