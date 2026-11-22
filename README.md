@@ -34,4 +34,4 @@ Needs Node and a Rust toolchain.
 
 `npm run test:rust` runs the Rust tests for the parsing and file code in `neon/core`.
 
-`npm run test:all` does all three. A quoted CSV field can span several lines. TSV and PSV have no quoting, so when a CSV is converted to them, tabs, pipes and line breaks inside a cell become spaces.
+`npm run test:all` does all three. Supported types are csv, tsv and psv (any letter case). Any other extension throws. A quoted CSV field can span several lines. TSV and PSV have no quoting, so when a CSV is converted to them, tabs, pipes and line breaks inside a cell become spaces.

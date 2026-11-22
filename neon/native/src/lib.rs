@@ -1,5 +1,7 @@
+use text_formatter_core::convert::*;
 use text_formatter_core::formats::*;
-use text_formatter_core::store::*;
+use text_formatter_core::io::*;
+use text_formatter_core::read::*;
 
 use neon::prelude::*;
 
@@ -58,54 +60,51 @@ fn cx_object <'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResul
     Ok(rows)
 }
 
+fn string_arg(cx: &mut FunctionContext, index: i32) -> NeonResult<String> {
+    let arg: Handle<JsString> = cx.argument(index)?;
+
+    Ok(arg.value())
+}
+
+fn rows_arg(cx: &mut FunctionContext) -> NeonResult<Vec<Vec<String>>> {
+    let source = string_arg(cx, 0)?;
+
+    or_throw(file_array(&source), cx)
+}
+
 fn filearray(mut cx: FunctionContext) -> JsResult<JsArray> {
-    let s: Handle<JsString> = cx.argument(0)?;
-
-    let source: String = s.value() as String; 
-
-    let data = or_throw(file_array(&source), &mut cx)?;
+    let data = rows_arg(&mut cx)?;
 
     cx_array(&data, &mut cx)
 }
 
 fn fileobject(mut cx: FunctionContext) -> JsResult<JsArray> {
-    let s: Handle<JsString> = cx.argument(0)?;
-
-    let source: String = s.value() as String; 
-
-    let data = or_throw(file_array(&source), &mut cx)?;
+    let data = rows_arg(&mut cx)?;
 
     cx_object(&data, &mut cx)
 }
 
 fn readtext(mut cx: FunctionContext) -> JsResult<JsString> {
-    let name: Handle<JsString> = cx.argument(0)?;
-    
-    let file: String = name.value() as String;
+    let file = string_arg(&mut cx, 0)?;
     let data = or_throw(read_file(&file), &mut cx)?;
-    
+
     Ok(cx.string(data))
 }
 
 fn writetext(mut cx: FunctionContext) -> JsResult<JsNumber> {
-    let o: Handle<JsString> = cx.argument(0)?;
-    let d: Handle<JsString> = cx.argument(1)?;
+    let file = string_arg(&mut cx, 0)?;
+    let data = string_arg(&mut cx, 1)?;
+    let size = or_throw(write_file(&file, &data), &mut cx)?;
 
-    let file: &str = &o.value();
-    let data: &str = &d.value();
-
-    let size = or_throw(write_file(file, data), &mut cx)?;
-    
     Ok(cx.number(size as f64))
 }
 
 fn filetypes(mut cx: FunctionContext) -> JsResult<JsObject> {
     let obj: Handle<JsObject> = cx.empty_object();
-    let map = FileFormats::new();
 
-    for (k, v) in map.get_map() {
-        let key = cx.string(k);
-        let val = cx.string(v);
+    for format in Format::all() {
+        let key = cx.string(format.ext());
+        let val = cx.string(format.delim());
 
         obj.set(&mut cx, key, val)?;
     }
@@ -114,35 +113,18 @@ fn filetypes(mut cx: FunctionContext) -> JsResult<JsObject> {
 }
 
 fn convfile(mut cx: FunctionContext) -> JsResult<JsNumber> {
-    let i: Handle<JsString> = cx.argument(0)?;
-    let o: Handle<JsString> = cx.argument(1)?;
-
-    let source: &str = &i.value(); 
-    let target: &str = &o.value();
-
-    let data = or_throw(file_array(&source), &mut cx)?;
-    let ttype = or_throw(file_type(&target), &mut cx)?;
-
-    let text = conv_data(&data, &ttype);
-    let size: usize = or_throw(write_file(target, &text), &mut cx)?;
+    let source = string_arg(&mut cx, 0)?;
+    let target = string_arg(&mut cx, 1)?;
+    let size = or_throw(convert_file(&source, &target), &mut cx)?;
 
     Ok(cx.number(size as f64))
 }
 
 fn convtext(mut cx: FunctionContext) -> JsResult<JsNumber> {
-    let i: Handle<JsString> = cx.argument(0)?;
-    let d: Handle<JsString> = cx.argument(1)?;
-    let o: Handle<JsString> = cx.argument(2)?;
-
-    let text: &str = &i.value(); 
-    let delim: &str = &d.value(); 
-    let target: &str = &o.value();
-
-    let data = parse_text(text, delim);
-    let ttype = or_throw(file_type(&target), &mut cx)?;
-
-    let text = conv_data(&data, &ttype);
-    let size: usize = or_throw(write_file(target, &text), &mut cx)?;
+    let text = string_arg(&mut cx, 0)?;
+    let delim = string_arg(&mut cx, 1)?;
+    let target = string_arg(&mut cx, 2)?;
+    let size = or_throw(convert_text(&text, &delim, &target), &mut cx)?;
 
     Ok(cx.number(size as f64))
 }
