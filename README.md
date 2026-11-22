@@ -1,6 +1,28 @@
 # neon-text-formatter
 
-Reads and converts CSV, TSV and PSV (pipe separated) text. The parsing is done by a Rust addon built with [Neon](https://neon-bindings.com), so big files are fast.
+![license](https://img.shields.io/badge/license-MIT-blue) ![node](https://img.shields.io/badge/node-%3E%3D16-339933) ![rust](https://img.shields.io/badge/built%20with-Rust%20%2B%20Neon-b7410e) ![tests](https://img.shields.io/badge/tests-Rust%20%2B%20jest-brightgreen)
+
+Read and convert CSV, TSV and PSV (pipe separated) text from Node. The parsing is done by a Rust addon built with [Neon](https://neon-bindings.com), so big files are fast: 2 million rows read in about 1.5 seconds on a 12-core laptop.
+
+**Docs:** [Format guide](https://github.com/dimcher/neon-text-formatter/blob/master/docs/formats.md) · [Architecture](https://github.com/dimcher/neon-text-formatter/blob/master/docs/architecture.md) · [Testing](https://github.com/dimcher/neon-text-formatter/blob/master/docs/testing.md) · [Troubleshooting](https://github.com/dimcher/neon-text-formatter/blob/master/docs/troubleshooting.md) · [Contributing](https://github.com/dimcher/neon-text-formatter/blob/master/docs/contributing.md) · [Changelog](https://github.com/dimcher/neon-text-formatter/blob/master/CHANGELOG.md)
+
+## What you get
+
+- **One call to read.** `readArray` gives rows of cells, `readObject` uses the first row as keys.
+- **One call to convert.** `convFile("a.csv", "a.tsv")` picks the format from the file extension.
+- **Real CSV.** Quoted fields can hold commas, quotes and line breaks. A stray quote does not swallow the lines after it.
+- **Clear errors.** A missing file, bad UTF-8 or an unknown extension throws a JS error with the reason.
+- **Fast.** Big inputs are split across CPU cores. The result keeps the row order.
+- **Checked.** Rust unit tests, a round-trip fuzz test, jest tests on the real addon, and a local browser demo.
+
+## Quick start
+
+The addon is built for the machine it is built on. Clone the repo, then:
+
+```
+npm install
+npm run build:native
+```
 
 ```js
 const { readArray, readObject, convFile } = require("@dimcher/neon-text-formatter");
@@ -10,9 +32,79 @@ readObject("people.csv");
 convFile("people.csv", "people.tsv");
 ```
 
-The addon is built for the machine it is built on. Install from a git clone and run `npm run build:native` (see [Build and test](#build-and-test)). The addon uses Node-API, so one build loads on any supported Node version.
+The addon uses Node-API, so one build loads on any supported Node version. Needs Node 16 or newer and a [Rust toolchain](https://rustup.rs). If something fails, see [Troubleshooting](https://github.com/dimcher/neon-text-formatter/blob/master/docs/troubleshooting.md).
 
-**Docs:** [Format guide](https://github.com/dimcher/neon-text-formatter/blob/master/docs/formats.md) · [Architecture](https://github.com/dimcher/neon-text-formatter/blob/master/docs/architecture.md) · [Testing](https://github.com/dimcher/neon-text-formatter/blob/master/docs/testing.md) · [Troubleshooting](https://github.com/dimcher/neon-text-formatter/blob/master/docs/troubleshooting.md) · [Contributing](https://github.com/dimcher/neon-text-formatter/blob/master/docs/contributing.md) · [Changelog](https://github.com/dimcher/neon-text-formatter/blob/master/CHANGELOG.md)
+## Live samples
+
+These are real results from the addon, for the file [`samples/people.csv`](samples/people.csv). It has a comma inside a quoted cell, doubled quotes, and a cell with a line break:
+
+```
+name,city,note
+Ann,"Paris, FR","likes ""jazz"""
+Bob,Oslo,"two
+lines"
+```
+
+<!-- samples:start -->
+**Read rows**
+
+```js
+readArray("samples/people.csv")
+```
+
+```js
+[
+  ["name","city","note"],
+  ["Ann","Paris, FR","likes \"jazz\""],
+  ["Bob","Oslo","two\nlines"]
+]
+```
+
+**Read objects**
+
+```js
+readObject("samples/people.csv")
+```
+
+```js
+[
+  {"name":"Ann","city":"Paris, FR","note":"likes \"jazz\""},
+  {"name":"Bob","city":"Oslo","note":"two\nlines"}
+]
+```
+
+**Convert to TSV**
+
+```js
+convFile("samples/people.csv", "people.tsv")
+```
+
+```text
+name<TAB>city<TAB>note\r\n
+Ann<TAB>Paris, FR<TAB>likes "jazz"\r\n
+Bob<TAB>Oslo<TAB>two lines
+```
+
+**Convert to PSV**
+
+```js
+convFile("samples/people.csv", "people.psv")
+```
+
+```text
+name|city|note\r\n
+Ann|Paris, FR|likes "jazz"\r\n
+Bob|Oslo|two lines
+```
+<!-- samples:end -->
+
+Run `npm run samples` to see the same output on your machine. The `samples:` block above is written by `npm run samples:write`, and a test fails if it no longer matches the real addon output. More cases are in the [format guide](https://github.com/dimcher/neon-text-formatter/blob/master/docs/formats.md).
+
+## Try it in a browser
+
+![The demo page](docs/demo.png)
+
+Paste CSV, TSV or PSV text, then parse it or convert it. The page calls the real addon through a small local server. See [Try it in a browser](#run-the-demo) below for how to start it.
 
 ## API
 
@@ -78,11 +170,11 @@ Needs Node 16 or newer and a Rust toolchain.
 
 The Rust tests include a round-trip fuzz test: 3,000 random tables are written to CSV and read back, and must come out the same.
 
-## Try it in a browser
+## Run the demo
 
 This needs a git clone of the repo; the npm package does not include the demo. Run `npm run build:native`, then `npm run demo` and open http://127.0.0.1:4321. Paste CSV, TSV or PSV text, then parse it or convert it. The page calls the real addon through a small local server (`PORT` changes the port). The server only answers requests for 127.0.0.1 or localhost from the page itself, and refuses bodies over 1 MB.
 
-## More
+## More documentation
 
 - [Format guide](https://github.com/dimcher/neon-text-formatter/blob/master/docs/formats.md): how each format reads and writes, with real results for the odd cases.
 - [Architecture](https://github.com/dimcher/neon-text-formatter/blob/master/docs/architecture.md): how the code is laid out, how a read works, how threads are used, and how fast it is.
