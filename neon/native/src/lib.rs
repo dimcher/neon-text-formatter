@@ -44,28 +44,36 @@ fn cx_array<'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<
     Ok(rows)
 }
 
-fn cx_row_object<'a, C: Context<'a>>(head: &[String], row: &[String], cx: &mut C) -> JsResult<'a, JsObject> {
+fn cx_row_object<'a, C: Context<'a>>(keys: &[Handle<JsString>], row: &[String], cx: &mut C) -> JsResult<'a, JsObject> {
     let obj: Handle<JsObject> = cx.empty_object();
 
-    for (key, cell) in head.iter().zip(row.iter()) {
+    for (key, cell) in keys.iter().zip(row.iter()) {
         let val = cx.string(cell);
-        obj.set(cx, key.as_str(), val)?;
+        obj.set(cx, *key, val)?;
     }
 
     Ok(obj)
 }
 
+fn key_handles<'a, C: Context<'a>>(head: &[String], cx: &mut C) -> Vec<Handle<'a, JsString>> {
+    head.iter().map(|key| cx.string(key)).collect()
+}
+
 fn cx_object<'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<'a, JsArray> {
     let rows = JsArray::new(cx, vec.len().saturating_sub(1));
     let empty: Vec<String> = vec![];
-    let head = vec.first().unwrap_or(&empty);
+    let keys = key_handles(vec.first().unwrap_or(&empty), cx);
 
     for (ri, row) in vec.iter().enumerate().skip(1) {
-        let obj = cx.compute_scoped(|mut inner| cx_row_object(head, row, &mut inner))?;
+        let obj = cx.compute_scoped(|mut inner| cx_row_object(&keys, row, &mut inner))?;
         rows.set(cx, (ri - 1) as u32, obj)?;
     }
 
     Ok(rows)
+}
+
+fn release(data: Vec<Vec<String>>) {
+    std::thread::spawn(move || drop(data));
 }
 
 fn rows_arg(cx: &mut FunctionContext) -> NeonResult<Vec<Vec<String>>> {
@@ -76,14 +84,20 @@ fn rows_arg(cx: &mut FunctionContext) -> NeonResult<Vec<Vec<String>>> {
 
 fn filearray(mut cx: FunctionContext) -> JsResult<JsArray> {
     let data = rows_arg(&mut cx)?;
+    let result = cx_array(&data, &mut cx);
 
-    cx_array(&data, &mut cx)
+    release(data);
+
+    result
 }
 
 fn fileobject(mut cx: FunctionContext) -> JsResult<JsArray> {
     let data = rows_arg(&mut cx)?;
+    let result = cx_object(&data, &mut cx);
 
-    cx_object(&data, &mut cx)
+    release(data);
+
+    result
 }
 
 fn readtext(mut cx: FunctionContext) -> JsResult<JsString> {

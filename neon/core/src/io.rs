@@ -8,12 +8,19 @@ pub fn file_type(file: &str) -> Result<&str, String> {
         .ok_or_else(|| format!("Cannot find a file extension in '{}'", file))
 }
 
-pub fn read_file(name: &str) -> Result<String, String> {
-    let mut text = String::new();
+fn read_error(name: &str, err: std::io::Error) -> String {
+    format!("Cannot read {}: {}", name, err)
+}
 
-    File::open(name)
-        .and_then(|mut f| f.read_to_string(&mut text))
-        .map_err(|err| format!("Cannot read {}: {}", name, err))?;
+fn size_hint(file: &File) -> usize {
+    file.metadata().map_or(0, |meta| meta.len() as usize)
+}
+
+pub fn read_file(name: &str) -> Result<String, String> {
+    let mut file = File::open(name).map_err(|err| read_error(name, err))?;
+    let mut text = String::with_capacity(size_hint(&file));
+
+    file.read_to_string(&mut text).map_err(|err| read_error(name, err))?;
 
     Ok(text)
 }
