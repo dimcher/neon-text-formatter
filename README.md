@@ -22,8 +22,16 @@ readArray(source)
 
 readObject(source)
 
-# Tests
+Every function throws a JS error when a file cannot be read or written, when a file is not valid UTF-8, or when a file name has no extension. Before 0.2.0 these cases returned an empty string, an empty array or `0`.
 
-`npm test` runs the jest tests. The addon tests in `__tests__/addon.test.js` are skipped until `neon/native/index.node` is built.
+# Build and test
 
-`npm run test:rust` runs the Rust tests for the parsing and file code in `neon/core`. Known CSV bugs are kept as ignored tests; `cargo test --manifest-path neon/core/Cargo.toml -- --ignored` shows them.
+Needs Node and a Rust toolchain.
+
+`npm run build:native` builds the Rust addon and copies it to `neon/native/index.node`.
+
+`npm test` runs the jest tests. The addon tests in `__tests__/addon.test.js` are skipped until the addon is built; with `REQUIRE_ADDON=1` they fail instead of skipping.
+
+`npm run test:rust` runs the Rust tests for the parsing and file code in `neon/core`.
+
+`npm run test:all` does all three. A quoted CSV field that spans several lines is a known limitation and is kept as an ignored Rust test.

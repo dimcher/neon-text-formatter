@@ -5,7 +5,14 @@ const os = require("os");
 const path = require("path");
 
 const addonPath = path.resolve(__dirname, "../neon/native/index.node");
-const describeWithAddon = fs.existsSync(addonPath) ? describe : describe.skip;
+const addonBuilt = fs.existsSync(addonPath);
+const describeWithAddon = addonBuilt ? describe : describe.skip;
+
+if (process.env.REQUIRE_ADDON === "1") {
+    it("has a built neon/native/index.node (REQUIRE_ADDON=1)", () => {
+        expect(addonBuilt).toBe(true);
+    });
+}
 
 const makeTempDir = () => fs.mkdtempSync(path.join(os.tmpdir(), "ntf-"));
 
@@ -90,6 +97,50 @@ describeWithAddon("native addon (needs a built neon/native/index.node)", () => {
 
         expect(() => api.convFile(path.join(dir, "missing.csv"), target)).toThrow(/Cannot read/);
         expect(fs.readFileSync(target, "utf8")).toBe("keep me");
+    });
+
+    it("readArray and readObject throw on a missing file", () => {
+        const missing = path.join(dir, "missing.csv");
+
+        expect(() => api.readArray(missing)).toThrow(/Cannot read/);
+        expect(() => api.readObject(missing)).toThrow(/Cannot read/);
+    });
+
+    it("readArray throws a clear error for a name without an extension", () => {
+        expect(() => api.readArray("")).toThrow(/file extension/);
+        expect(() => api.readArray(path.join(dir, "data."))).toThrow(/file extension/);
+    });
+
+    it("convFile throws a clear error for a target without an extension", () => {
+        const source = write("in.csv", "\"a\"");
+
+        expect(() => api.convFile(source, path.join(dir, "out."))).toThrow(/file extension/);
+    });
+
+    it("readText throws on a file that is not valid utf-8", () => {
+        const file = path.join(dir, "binary.txt");
+        fs.writeFileSync(file, Buffer.from([0xff, 0xfe, 0x41]));
+
+        expect(() => api.readText(file)).toThrow(/Cannot read/);
+    });
+
+    it("writeText throws when the target folder does not exist", () => {
+        expect(() => api.writeText("x", path.join(dir, "no", "such", "out.txt"))).toThrow(/Cannot write/);
+    });
+
+    it("convFile throws when the target folder does not exist", () => {
+        const source = write("in.tsv", "a\tb");
+
+        expect(() => api.convFile(source, path.join(dir, "no", "such", "out.csv"))).toThrow(/Cannot write/);
+    });
+
+    it("convFile keeps quotes and commas inside csv values", () => {
+        const source = write("in.tsv", "say \"hi\"\ta,b");
+        const target = path.join(dir, "out.csv");
+
+        api.convFile(source, target);
+
+        expect(api.readArray(target)).toEqual([["say \"hi\"", "a,b"]]);
     });
 
     it("readText throws on a missing file", () => {

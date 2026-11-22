@@ -1,8 +1,6 @@
-cargo.lock
 package-lock.json
 
-neon/native/target
-neon/core/target
+neon/target
 neon/native/index.node
 neon/native/artifacts.json
 

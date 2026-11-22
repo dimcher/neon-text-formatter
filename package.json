@@ -1,6 +1,6 @@
 {
   "name": "@dimcher/neon-text-formatter",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "NPM package for text formating extended with Rust module",
   "main": "index.js",
   "author": "Dima Chernyshev <dimcher@gmail.com>",
@@ -12,8 +12,10 @@
   "scripts": {
     "start": "ts-node index.js",
     "build": "tsc",
+    "build:native": "node scripts/build-native.js",
     "test": "jest",
-    "test:rust": "cargo test --manifest-path neon/core/Cargo.toml"
+    "test:rust": "cargo test -p text-formatter-core --manifest-path neon/Cargo.toml",
+    "test:all": "npm run build:native && npm run test:rust && REQUIRE_ADDON=1 jest"
   },
   "husky": {
     "hooks": {
