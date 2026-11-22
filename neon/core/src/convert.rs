@@ -15,6 +15,15 @@ pub fn convert_file(source: &str, target: &str) -> Result<usize, String> {
     write_rows(&rows, target)
 }
 
+fn check_delim(delim: &str) -> Result<(), String> {
+    if delim.chars().count() == 1 {
+        return Ok(());
+    }
+
+    Err(format!("Delimiter must be one character, got '{}'", delim))
+}
+
 pub fn convert_text(text: &str, delim: &str, target: &str) -> Result<usize, String> {
+    check_delim(delim)?;
     write_rows(&parse_text(text, delim), target)
 }

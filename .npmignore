@@ -9,3 +9,4 @@ neon/native/cargo.*
 neon/core
 __tests__
 demo
+docs

@@ -108,6 +108,16 @@ fn convert_text_uses_the_given_delimiter() {
 }
 
 #[test]
+fn convert_text_rejects_a_delimiter_that_is_not_one_character() {
+    let target = temp_path("bad-delim.csv").to_string_lossy().into_owned();
+
+    for delim in ["", ",,"] {
+        assert!(convert_text("a,b", delim, &target).unwrap_err().starts_with("Delimiter must be one character"));
+    }
+    assert!(read_file(&target).is_err());
+}
+
+#[test]
 fn file_array_reports_an_unsupported_extension() {
     let file = temp_file("input.txt", "a,b");
 
@@ -436,4 +446,52 @@ fn convert_file_turns_psv_into_a_csv_that_reads_back() {
     assert_eq!(file_array(&target), Ok(rows(&[&["a,b", "c\"d"]])));
     fs::remove_file(source).unwrap();
     fs::remove_file(target).unwrap();
+}
+
+#[test]
+fn chunk_size_never_goes_below_the_minimum() {
+    assert_eq!(chunk_size(0, 8), 20000);
+    assert_eq!(chunk_size(1000, 8), 20000);
+    assert_eq!(chunk_size(100000, 8), 20000);
+}
+
+#[test]
+fn chunk_size_splits_big_input_evenly_across_workers() {
+    assert_eq!(chunk_size(800000, 8), 100000);
+    assert_eq!(chunk_size(800001, 8), 100001);
+    assert!(800001_usize.div_ceil(chunk_size(800001, 8)) <= 8);
+}
+
+#[test]
+fn chunk_size_copes_with_zero_workers() {
+    assert_eq!(chunk_size(100000, 0), 100000);
+}
+
+#[test]
+fn parse_text_keeps_row_order_when_split_into_several_chunks() {
+    let text: String = (0..90000).map(|n| format!("{},x\n", n)).collect();
+    let rows = parse_text(&text, ",");
+
+    assert_eq!(rows.len(), 90000);
+    assert!(rows.iter().enumerate().all(|(n, row)| row[0] == n.to_string()));
+}
+
+#[test]
+fn parse_text_sized_keeps_multi_line_quoted_records_whole_across_chunks() {
+    let text = (0..50)
+        .map(|n| format!("\"line {n}\nsecond {n}\",{n}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let rows = parse_text_sized(&text, ",", 3);
+
+    assert_eq!(rows.len(), 50);
+    assert!(rows.iter().enumerate().all(|(n, row)| row == &vec![format!("line {n}\nsecond {n}"), n.to_string()]));
+}
+
+#[test]
+fn parse_text_sized_matches_the_single_chunk_result() {
+    let text = (0..200).map(|n| format!("{n},\"a,{n}\",x")).collect::<Vec<_>>().join("\n");
+
+    assert_eq!(parse_text_sized(&text, ",", 7), parse_text_sized(&text, ",", 100000));
 }

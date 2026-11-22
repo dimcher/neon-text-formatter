@@ -196,6 +196,31 @@ describeWithAddon("native addon (needs a built neon/native/index.node)", () => {
         expect(api.readObject(file)).toEqual([{ a: "1" }, { a: "2", b: "3" }]);
     });
 
+    it("readObject keeps the last value when a header name repeats", () => {
+        const file = write("dup.csv", "a,b,a\n1,2,3");
+
+        expect(api.readObject(file)).toEqual([{ a: "3", b: "2" }]);
+    });
+
+    it("readObject returns an empty list for a header-only file and for an empty file", () => {
+        expect(api.readObject(write("head.csv", "a,b"))).toEqual([]);
+        expect(api.readObject(write("none.csv", ""))).toEqual([]);
+    });
+
+    it("readObject gives every row the same keys across many rows", () => {
+        const text = ["id,name"].concat(Array.from({ length: 5000 }, (_, n) => `${n},n${n}`)).join("\n");
+        const rows = api.readObject(write("many.csv", text));
+
+        expect(rows).toHaveLength(5000);
+        expect(rows.every((row, n) => row.id === String(n) && row.name === `n${n}`)).toBe(true);
+    });
+
+    it("readArray reads a file that is larger than its first buffer guess", () => {
+        const text = Array.from({ length: 3000 }, (_, n) => `${n},${"x".repeat(100)}`).join("\n");
+
+        expect(api.readArray(write("wide.csv", text))).toHaveLength(3000);
+    });
+
     it("convText reads csv text and writes a csv that reads back the same rows", () => {
         const target = path.join(dir, "text.csv");
 

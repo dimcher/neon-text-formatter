@@ -17,7 +17,9 @@
     "test": "jest",
     "test:rust": "cargo test -p text-formatter-core --manifest-path neon/Cargo.toml",
     "test:all": "npm run build:native && npm run test:rust && REQUIRE_ADDON=1 jest",
-    "prepare": "husky || true"
+    "prepare": "husky || true",
+    "samples": "node scripts/readme-samples.js",
+    "samples:write": "node scripts/readme-samples.js --write"
   },
   "devDependencies": {
     "eslint": "^10.15.0",
