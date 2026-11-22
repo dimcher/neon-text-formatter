@@ -1,23 +1,19 @@
 use crate::formats::*;
 
 use regex::Regex;
-use std::{fs::File, io::{Read, Write}, {thread}};
+use std::{fs::File, io::{Read, Write}, iter::Peekable, str::Chars, thread};
 
 const EOL: &str = "\r\n";
 const QUOTE: char = '"';
+const CSV_DELIM: char = ',';
 const THSIZE: usize = 200000;
 
-fn min_max(word: &str) -> Box<[char; 2]> {
-    let w: Vec<char> = word.chars().collect();
-
-    Box::new([w[0], w[w.len()-1]])
-}
-
-pub fn file_type<'a>(file: &'a str) -> &'a str {
+pub fn file_type<'a>(file: &'a str) -> Result<&'a str, String> {
     let re = Regex::new(r"[^\.]+$").unwrap();
-    let mat = re.find(file).unwrap();
-    
-    &file[mat.start()..mat.end()]
+
+    re.find(file)
+        .map(|mat| &file[mat.start()..mat.end()])
+        .ok_or_else(|| format!("Cannot find a file extension in '{}'", file))
 }
 
 pub fn read_file(name: &str) -> Result<String, String> {
@@ -40,73 +36,49 @@ pub fn write_file(file: &str, data: &str) -> Result<usize, String> {
     Ok(bytes.len())
 }
 
-fn auto_trim (text: &str, beg: bool, end: bool) -> Box<String> {
-    let len: usize = text.len();
-    let mut data = text.to_string();
+fn read_quoted_char(c: char, chars: &mut Peekable<Chars>, field: &mut String) -> bool {
+    if c != QUOTE {
+        field.push(c);
+        return true;
+    }
 
-    if len > 1 {
-        if beg {
-            data.remove(0);
-        }
-        if end {
-            data.pop();
+    if chars.peek() == Some(&QUOTE) {
+        chars.next();
+        field.push(QUOTE);
+        return true;
+    }
+
+    false
+}
+
+fn parse_csv_line(line: &str) -> Vec<String> {
+    let mut fields: Vec<String> = Vec::new();
+    let mut field = String::new();
+    let mut in_quotes = false;
+    let mut at_start = true;
+    let mut chars = line.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if in_quotes {
+            in_quotes = read_quoted_char(c, &mut chars, &mut field);
+        } else if c == QUOTE && at_start {
+            in_quotes = true;
+            at_start = false;
+        } else if c == CSV_DELIM {
+            fields.push(std::mem::take(&mut field));
+            at_start = true;
+        } else {
+            field.push(c);
+            at_start = false;
         }
     }
 
-    Box::new(data)
+    fields.push(field);
+    fields
 }
 
 pub fn parse_csv(lines: &Vec<String>) -> Box<Vec<Vec<String>>> {
-    let mut data: Vec<Vec<String>> = Vec::new();
-    let re = Regex::new(r#""{2}"#).unwrap();
-
-    for line in lines {
-        let ln = re.replace(line, String::from(QUOTE));
-
-        let parts: Vec<&str> = ln.split(COMMA).collect();
-        let last = parts.len();
-
-        let mut words: Vec<String> = Vec::new();
-        let mut append: String = String::from("");
-
-        for i in 0..last {
-            let wd = parts[i];
-            let [mut min, mut max]: [char; 2] = [' ', ' '];
-
-            if wd.len() > 0 {
-                [min, max] = *min_max(wd);
-            }
-
-            let beg: bool = min == QUOTE;
-            let end: bool = max == QUOTE;
-
-            if append.len() > 0 {
-                append.push_str(COMMA);
-                append.push_str(wd);
-                
-                if end {
-                    words.push(auto_trim(&append, true, true).to_string());
-                    append = String::new();
-                }
-                else if i == last {
-                    words.push(auto_trim(&append, true, end).to_string());
-                }
-
-                continue;
-            }
-
-            if beg && !end && i != last {
-                append = String::from(wd);
-                continue;
-            }
-
-            words.push(auto_trim(&wd.to_string(), beg, end).to_string());
-        }
-        
-        data.push(words);
-    }
-
-    Box::new(data)
+    Box::new(lines.iter().map(|line| parse_csv_line(line)).collect())
 }
 
 pub fn parse_data(lines: &Vec<String>, delim: &str) -> Box<Vec<Vec<String>>> {
@@ -153,7 +125,7 @@ pub fn parse_text(data: &str, delim: &str) -> Box<Vec<Vec<String>>> {
 }
 
 pub fn file_array(file: &str) -> Result<Box<Vec<Vec<String>>>, String> {
-    let fmt = file_type(file);
+    let fmt = file_type(file)?;
     let data = read_file(file)?;
     let map = FileFormats::new();
     let delim = map.get_delim(&fmt);
@@ -172,7 +144,7 @@ pub fn conv_data<'a>(data: &Vec<Vec<String>>, key: &str) -> Box<String> {
             let mut line: Vec<String> = Vec::new();
 
             for j in 0..data[i].len() {
-                line.push(format!("{}{}{}", QUOTE, data[i][j], QUOTE));
+                line.push(format!("{}{}{}", QUOTE, data[i][j].replace(QUOTE, "\"\""), QUOTE));
             }
 
             arr.push(line.join(&dlm.to_string()));

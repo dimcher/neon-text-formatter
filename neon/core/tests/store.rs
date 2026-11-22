@@ -23,8 +23,14 @@ fn temp_file(name: &str, text: &str) -> String {
 
 #[test]
 fn file_type_returns_the_extension() {
-    assert_eq!(file_type("dir/data.csv"), "csv");
-    assert_eq!(file_type("archive.tar.tsv"), "tsv");
+    assert_eq!(file_type("dir/data.csv"), Ok("csv"));
+    assert_eq!(file_type("archive.tar.tsv"), Ok("tsv"));
+}
+
+#[test]
+fn file_type_reports_a_name_without_an_extension_instead_of_panicking() {
+    assert!(file_type("data.").unwrap_err().starts_with("Cannot find a file extension"));
+    assert!(file_type("").is_err());
 }
 
 #[test]
@@ -66,7 +72,6 @@ fn parse_csv_unescapes_a_doubled_quote() {
 }
 
 #[test]
-#[ignore = "known bug: Regex::replace only unescapes the first doubled quote on a line"]
 fn parse_csv_unescapes_every_doubled_quote() {
     let result = parse_csv(&lines(&["\"a\"\"b\",\"c\"\"d\""]));
 
@@ -74,11 +79,39 @@ fn parse_csv_unescapes_every_doubled_quote() {
 }
 
 #[test]
-#[ignore = "known bug: an empty quoted field comes back as a single quote"]
 fn parse_csv_reads_an_empty_quoted_field_as_empty() {
     let result = parse_csv(&lines(&["\"a\",\"\",\"b\""]));
 
     assert_eq!(*result, rows(&[&["a", "", "b"]]));
+}
+
+#[test]
+fn parse_csv_keeps_the_text_of_a_quote_that_never_closes() {
+    let result = parse_csv(&lines(&["\"a,b", "x,\"y"]));
+
+    assert_eq!(*result, rows(&[&["a,b"], &["x", "y"]]));
+}
+
+#[test]
+fn parse_csv_keeps_a_quote_in_the_middle_of_an_unquoted_field() {
+    let result = parse_csv(&lines(&["5\" nails,b"]));
+
+    assert_eq!(*result, rows(&[&["5\" nails", "b"]]));
+}
+
+#[test]
+fn parse_csv_keeps_empty_fields() {
+    let result = parse_csv(&lines(&[",a,,", ""]));
+
+    assert_eq!(*result, rows(&[&["", "a", "", ""], &[""]]));
+}
+
+#[test]
+#[ignore = "known limitation: lines are split before csv parsing, so a quoted field cannot span lines"]
+fn parse_text_keeps_a_quoted_field_that_spans_lines() {
+    let result = parse_text("\"a\nb\",c", COMMA);
+
+    assert_eq!(*result, rows(&[&["a\nb", "c"]]));
 }
 
 #[test]
@@ -115,11 +148,19 @@ fn conv_data_joins_tsv_and_psv_without_quotes() {
 }
 
 #[test]
-#[ignore = "known bug: quotes inside a csv value are not doubled on write"]
 fn conv_data_escapes_quotes_inside_csv_values() {
     let text = conv_data(&rows(&[&["say \"hi\""]]), "csv");
 
     assert_eq!(*text, "\"say \"\"hi\"\"\"");
+}
+
+#[test]
+fn csv_written_by_conv_data_reads_back_the_same() {
+    let data = rows(&[&["say \"hi\"", "a,b", ""], &["1", "", "x"]]);
+    let text = conv_data(&data, "csv");
+    let back = parse_text(&text, COMMA);
+
+    assert_eq!(*back, data);
 }
 
 #[test]
@@ -160,4 +201,11 @@ fn file_array_picks_the_delimiter_from_the_extension() {
 #[test]
 fn file_array_reports_a_missing_file() {
     assert!(file_array("/no/such/dir/missing.tsv").is_err());
+}
+
+#[test]
+fn file_array_reports_a_name_without_an_extension() {
+    let error = file_array("data.").unwrap_err();
+
+    assert!(error.starts_with("Cannot find a file extension"), "{}", error);
 }

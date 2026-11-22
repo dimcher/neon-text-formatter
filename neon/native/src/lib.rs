@@ -107,7 +107,7 @@ fn filetypes(mut cx: FunctionContext) -> JsResult<JsObject> {
         let key = cx.string(k);
         let val = cx.string(v);
 
-        obj.set(&mut cx, key, val).unwrap();
+        obj.set(&mut cx, key, val)?;
     }
 
     Ok(obj)
@@ -121,7 +121,7 @@ fn convfile(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let target: &str = &o.value();
 
     let data = or_throw(file_array(&source), &mut cx)?;
-    let ttype = file_type(&target);
+    let ttype = or_throw(file_type(&target), &mut cx)?;
 
     let text = conv_data(&data, &ttype);
     let size: usize = or_throw(write_file(target, &text), &mut cx)?;
@@ -139,7 +139,7 @@ fn convtext(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let target: &str = &o.value();
 
     let data = parse_text(text, delim);
-    let ttype = file_type(&target);
+    let ttype = or_throw(file_type(&target), &mut cx)?;
 
     let text = conv_data(&data, &ttype);
     let size: usize = or_throw(write_file(target, &text), &mut cx)?;
