@@ -2,7 +2,7 @@
 
 ![license](https://img.shields.io/badge/license-MIT-blue) ![node](https://img.shields.io/badge/node-%3E%3D16-339933) ![rust](https://img.shields.io/badge/built%20with-Rust%20%2B%20Neon-b7410e) ![tests](https://img.shields.io/badge/tests-Rust%20%2B%20jest-brightgreen)
 
-Read and convert CSV, TSV and PSV (pipe separated) text from Node. The parsing is done by a Rust addon built with [Neon](https://neon-bindings.com), and it keeps the quote rules and error messages the same for every format. Where it helps most is converting: `convFile` is about 5 times faster than reading and writing with a pure-JS parser (see [Performance](#performance)).
+Read and convert CSV, TSV and PSV (pipe separated) text from Node. The parsing is done by a Rust addon built with [Neon](https://neon-bindings.com), and it keeps the quote rules and error messages the same for every format. Where it helps most is converting: `convFile` is about 10 times faster than reading and writing with a pure-JS parser (see [Performance](#performance)).
 
 **Docs:** [Format guide](https://github.com/dimcher/neon-text-formatter/blob/master/docs/formats.md) · [Architecture](https://github.com/dimcher/neon-text-formatter/blob/master/docs/architecture.md) · [Testing](https://github.com/dimcher/neon-text-formatter/blob/master/docs/testing.md) · [Troubleshooting](https://github.com/dimcher/neon-text-formatter/blob/master/docs/troubleshooting.md) · [Contributing](https://github.com/dimcher/neon-text-formatter/blob/master/docs/contributing.md) · [Changelog](https://github.com/dimcher/neon-text-formatter/blob/master/CHANGELOG.md)
 
@@ -142,14 +142,14 @@ Measured on a 12-core laptop, 2 million rows of 5 columns with commas, doubled q
 | uDSV (pure JS) | 1.24 s |
 | d3-dsv (pure JS) | 1.46 s |
 | papaparse (pure JS) | 1.69 s |
-| **this addon, `readArray`** | **1.91 s** |
+| **this addon, `readArray`** | **1.74 s** |
 | csv-parse (pure JS) | 3.79 s |
 
 **Converting CSV to TSV**
 
 | Approach | Time |
 |---|---|
-| **this addon, `convFile`** | **0.46 s** |
+| **this addon, `convFile`** | **0.26 s** |
 | uDSV read + join and write | 2.46 s |
 | d3-dsv parse + `tsvFormatRows` | 2.80 s |
 

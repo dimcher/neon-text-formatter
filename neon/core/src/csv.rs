@@ -58,30 +58,53 @@ impl CsvState {
     }
 }
 
+fn finish_field(field: &mut String, line: &str, run: usize, end: usize) -> String {
+    if field.is_empty() {
+        return line[run..end].to_string();
+    }
+
+    field.push_str(&line[run..end]);
+    std::mem::take(field)
+}
+
 fn parse_csv_line(line: &str) -> Vec<String> {
+    let bytes = line.as_bytes();
     let mut fields: Vec<String> = Vec::new();
     let mut field = String::new();
     let mut state = CsvState::new();
-    let mut chars = line.chars().peekable();
+    let mut run = 0;
+    let mut i = 0;
 
-    while let Some(c) = chars.next() {
-        match state.next(c, chars.peek().copied()) {
-            CsvEvent::Open | CsvEvent::Close => {}
-            CsvEvent::Escaped => {
-                chars.next();
-                field.push(QUOTE);
+    while i < bytes.len() {
+        let upcoming = bytes.get(i + 1).map(|b| *b as char);
+
+        match state.next(bytes[i] as char, upcoming) {
+            CsvEvent::Char => {}
+            CsvEvent::Open | CsvEvent::Close => {
+                field.push_str(&line[run..i]);
+                run = i + 1;
             }
-            CsvEvent::Delim => fields.push(std::mem::take(&mut field)),
-            CsvEvent::Char => field.push(c),
+            CsvEvent::Escaped => {
+                field.push_str(&line[run..i]);
+                field.push(QUOTE);
+                i += 1;
+                run = i + 1;
+            }
+            CsvEvent::Delim => {
+                fields.push(finish_field(&mut field, line, run, i));
+                run = i + 1;
+            }
         }
+
+        i += 1;
     }
 
-    fields.push(field);
+    fields.push(finish_field(&mut field, line, run, bytes.len()));
     fields
 }
 
-pub fn parse_csv(lines: &[String]) -> Vec<Vec<String>> {
-    lines.iter().map(|line| parse_csv_line(line)).collect()
+pub fn parse_csv<S: AsRef<str>>(lines: &[S]) -> Vec<Vec<String>> {
+    lines.iter().map(|line| parse_csv_line(line.as_ref())).collect()
 }
 
 struct Record {
@@ -95,22 +118,22 @@ fn ends_field(upcoming: Option<char>) -> bool {
 }
 
 fn scan_record(data: &str, start: usize) -> Option<Record> {
+    let bytes = data.as_bytes();
     let mut state = CsvState::new();
-    let mut chars = data[start..].char_indices().peekable();
+    let mut i = start;
 
-    while let Some((i, c)) = chars.next() {
-        let upcoming = chars.peek().map(|(_, ch)| *ch);
+    while i < bytes.len() {
+        let c = bytes[i] as char;
+        let upcoming = bytes.get(i + 1).map(|b| *b as char);
 
         match state.next(c, upcoming) {
-            CsvEvent::Escaped => {
-                chars.next();
-            }
+            CsvEvent::Escaped => i += 1,
             CsvEvent::Close if !ends_field(upcoming) => return None,
-            _ if c == '\n' && !state.in_quotes => {
-                return Some(Record { start, end: start + i, next: start + i + 1 });
-            }
+            _ if c == '\n' && !state.in_quotes => return Some(Record { start, end: i, next: i + 1 }),
             _ => {}
         }
+
+        i += 1;
     }
 
     if state.in_quotes {
@@ -135,19 +158,19 @@ pub(crate) fn trim_cr(text: &str) -> &str {
     text.strip_suffix('\r').unwrap_or(text)
 }
 
-fn record_text(data: &str, record: &Record) -> String {
+fn record_text<'a>(data: &'a str, record: &Record) -> &'a str {
     let text = &data[record.start..record.end];
     let at_line_end = record.next > record.end || record.end == data.len();
 
     if at_line_end {
-        return trim_cr(text).to_string();
+        return trim_cr(text);
     }
 
-    text.to_string()
+    text
 }
 
-pub fn csv_records(data: &str) -> Vec<String> {
-    let mut records: Vec<String> = Vec::new();
+pub fn csv_records(data: &str) -> Vec<&str> {
+    let mut records: Vec<&str> = Vec::new();
     let mut start = 0;
 
     while start < data.len() {
