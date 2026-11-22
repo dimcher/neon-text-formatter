@@ -15,19 +15,15 @@
     "build:native": "node scripts/build-native.js",
     "test": "jest",
     "test:rust": "cargo test -p text-formatter-core --manifest-path neon/Cargo.toml",
-    "test:all": "npm run build:native && npm run test:rust && REQUIRE_ADDON=1 jest"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "npm run test"
-    }
-  },
-  "dependencies": {
-    "neon-cli": "^0.1.0"
+    "test:all": "npm run build:native && npm run test:rust && REQUIRE_ADDON=1 jest",
+    "prepare": "husky || true"
   },
   "devDependencies": {
-    "eslint": "^8.15.0",
-    "husky": "^8.0.1",
-    "jest": "^28.1.0"
+    "eslint": "^10.15.0",
+    "husky": "^9.1.7",
+    "jest": "^30.5.2"
+  },
+  "engines": {
+    "node": ">=16"
   }
 }

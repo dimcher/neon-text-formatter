@@ -5,7 +5,6 @@ neon/target
 neon/Cargo.*
 scripts
 neon/native/cargo.*
-neon/native/build.rs
-neon/native/artifacts.json
+.husky
 neon/core
 __tests__

@@ -10,15 +10,23 @@ fn or_throw<'a, T, C: Context<'a>>(result: Result<T, String>, cx: &mut C) -> Neo
     }
 }
 
+fn string_arg(cx: &mut FunctionContext, index: usize) -> NeonResult<String> {
+    let arg: Handle<JsString> = cx.argument(index)?;
+
+    Ok(arg.value(cx))
+}
+
+fn size_result<'a, C: Context<'a>>(cx: &mut C, size: usize) -> JsResult<'a, JsNumber> {
+    Ok(cx.number(size as f64))
+}
+
 fn cx_array<'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<'a, JsArray> {
     let rows: Handle<JsArray> = cx.empty_array();
 
-    let rl: usize = vec.len();
-
-    for ri in 0..rl {
+    for (ri, row) in vec.iter().enumerate() {
         let cols: Handle<JsArray> = cx.empty_array();
 
-        for (ci, cd) in vec[ri].iter().enumerate() {
+        for (ci, cd) in row.iter().enumerate() {
             let value = cx.string(cd);
             cols.set(cx, ci as u32, value)?;
         }
@@ -29,74 +37,57 @@ fn cx_array<'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<
     Ok(rows)
 }
 
-fn cx_object <'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<'a, JsArray> {
+fn cx_row_object<'a, C: Context<'a>>(head: &[String], row: &[String], cx: &mut C) -> JsResult<'a, JsObject> {
+    let obj: Handle<JsObject> = cx.empty_object();
+
+    for (key, cell) in head.iter().zip(row.iter()) {
+        let val = cx.string(cell);
+        obj.set(cx, key.as_str(), val)?;
+    }
+
+    Ok(obj)
+}
+
+fn cx_object<'a, C: Context<'a>>(vec: &Vec<Vec<String>>, cx: &mut C) -> JsResult<'a, JsArray> {
     let rows: Handle<JsArray> = cx.empty_array();
-    let empty = vec![];
+    let empty: Vec<String> = vec![];
+    let head = vec.first().unwrap_or(&empty);
 
-    let head =
-        if vec.len() > 0    { &vec[0] }
-        else                { &empty };
-
-    let rl: usize = vec.len();
-    let hl: usize = head.len();
-
-    for ri in 1..rl {
-        let obj: Handle<JsObject> = cx.empty_object();
-        let len: usize = vec[ri].len();
-        let max: usize = 
-            if len < hl { len } 
-            else        { hl };
-
-        for hi in 0..max {
-            let val = cx.string(&vec[ri][hi]);
-            obj.set(cx, head[hi].as_ref(), val)?;
-        }
-
-        rows.set(cx, (ri-1) as u32, obj)?;
+    for (ri, row) in vec.iter().enumerate().skip(1) {
+        let obj = cx_row_object(head, row, cx)?;
+        rows.set(cx, (ri - 1) as u32, obj)?;
     }
 
     Ok(rows)
 }
 
 fn filearray(mut cx: FunctionContext) -> JsResult<JsArray> {
-    let s: Handle<JsString> = cx.argument(0)?;
-
-    let source: String = s.value() as String; 
-
+    let source = string_arg(&mut cx, 0)?;
     let data = or_throw(file_array(&source), &mut cx)?;
 
     cx_array(&data, &mut cx)
 }
 
 fn fileobject(mut cx: FunctionContext) -> JsResult<JsArray> {
-    let s: Handle<JsString> = cx.argument(0)?;
-
-    let source: String = s.value() as String; 
-
+    let source = string_arg(&mut cx, 0)?;
     let data = or_throw(file_array(&source), &mut cx)?;
 
     cx_object(&data, &mut cx)
 }
 
 fn readtext(mut cx: FunctionContext) -> JsResult<JsString> {
-    let name: Handle<JsString> = cx.argument(0)?;
-    
-    let file: String = name.value() as String;
+    let file = string_arg(&mut cx, 0)?;
     let data = or_throw(read_file(&file), &mut cx)?;
-    
+
     Ok(cx.string(data))
 }
 
 fn writetext(mut cx: FunctionContext) -> JsResult<JsNumber> {
-    let o: Handle<JsString> = cx.argument(0)?;
-    let d: Handle<JsString> = cx.argument(1)?;
+    let file = string_arg(&mut cx, 0)?;
+    let data = string_arg(&mut cx, 1)?;
+    let size = or_throw(write_file(&file, &data), &mut cx)?;
 
-    let file: &str = &o.value();
-    let data: &str = &d.value();
-
-    let size = or_throw(write_file(file, data), &mut cx)?;
-    
-    Ok(cx.number(size as f64))
+    size_result(&mut cx, size)
 }
 
 fn filetypes(mut cx: FunctionContext) -> JsResult<JsObject> {
@@ -114,42 +105,34 @@ fn filetypes(mut cx: FunctionContext) -> JsResult<JsObject> {
 }
 
 fn convfile(mut cx: FunctionContext) -> JsResult<JsNumber> {
-    let i: Handle<JsString> = cx.argument(0)?;
-    let o: Handle<JsString> = cx.argument(1)?;
-
-    let source: &str = &i.value(); 
-    let target: &str = &o.value();
+    let source = string_arg(&mut cx, 0)?;
+    let target = string_arg(&mut cx, 1)?;
 
     let data = or_throw(file_array(&source), &mut cx)?;
     let ttype = or_throw(file_type(&target), &mut cx)?;
 
-    let text = conv_data(&data, &ttype);
-    let size: usize = or_throw(write_file(target, &text), &mut cx)?;
+    let text = conv_data(&data, ttype);
+    let size = or_throw(write_file(&target, &text), &mut cx)?;
 
-    Ok(cx.number(size as f64))
+    size_result(&mut cx, size)
 }
 
 fn convtext(mut cx: FunctionContext) -> JsResult<JsNumber> {
-    let i: Handle<JsString> = cx.argument(0)?;
-    let d: Handle<JsString> = cx.argument(1)?;
-    let o: Handle<JsString> = cx.argument(2)?;
+    let text = string_arg(&mut cx, 0)?;
+    let delim = string_arg(&mut cx, 1)?;
+    let target = string_arg(&mut cx, 2)?;
 
-    let text: &str = &i.value(); 
-    let delim: &str = &d.value(); 
-    let target: &str = &o.value();
-
-    let data = parse_text(text, delim);
+    let data = parse_text(&text, &delim);
     let ttype = or_throw(file_type(&target), &mut cx)?;
 
-    let text = conv_data(&data, &ttype);
-    let size: usize = or_throw(write_file(target, &text), &mut cx)?;
+    let out = conv_data(&data, ttype);
+    let size = or_throw(write_file(&target, &out), &mut cx)?;
 
-    Ok(cx.number(size as f64))
+    size_result(&mut cx, size)
 }
 
-register_module!(mut cx, {
-    let count: usize = 7;
-
+#[neon::main]
+fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("convFile", convfile)?;
     cx.export_function("convText", convtext)?;
     cx.export_function("readText", readtext)?;
@@ -158,7 +141,5 @@ register_module!(mut cx, {
     cx.export_function("fileArray", filearray)?;
     cx.export_function("fileObject", fileobject)?;
 
-    println!("Rust registered {} export Functions...", count);
-
     Ok(())
-});
+}
