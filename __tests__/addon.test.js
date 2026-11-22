@@ -143,6 +143,12 @@ describeWithAddon("native addon (needs a built neon/native/index.node)", () => {
         expect(api.readArray(target)).toEqual([["say \"hi\"", "a,b"]]);
     });
 
+    it("readArray keeps a quoted csv field that spans lines", () => {
+        const file = write("multi.csv", "\"a\nb\",c\r\n1,2");
+
+        expect(api.readArray(file)).toEqual([["a\nb", "c"], ["1", "2"]]);
+    });
+
     it("readText throws on a missing file", () => {
         expect(() => api.readText(path.join(dir, "missing.txt"))).toThrow(/Cannot read/);
     });

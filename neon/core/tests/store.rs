@@ -107,11 +107,67 @@ fn parse_csv_keeps_empty_fields() {
 }
 
 #[test]
-#[ignore = "known limitation: lines are split before csv parsing, so a quoted field cannot span lines"]
 fn parse_text_keeps_a_quoted_field_that_spans_lines() {
     let result = parse_text("\"a\nb\",c", COMMA);
 
     assert_eq!(*result, rows(&[&["a\nb", "c"]]));
+}
+
+#[test]
+fn parse_text_keeps_crlf_inside_a_quoted_field() {
+    let result = parse_text("\"a\r\nb\",c\r\n1,2\r\n", COMMA);
+
+    assert_eq!(*result, rows(&[&["a\r\nb", "c"], &["1", "2"]]));
+}
+
+#[test]
+fn parse_text_keeps_several_blank_lines_inside_a_quoted_field() {
+    let result = parse_text("x,\"a\n\n\nb\"\ny,z", COMMA);
+
+    assert_eq!(*result, rows(&[&["x", "a\n\n\nb"], &["y", "z"]]));
+}
+
+#[test]
+fn parse_text_reads_an_escaped_quote_before_a_newline_inside_a_field() {
+    let result = parse_text("\"say \"\"hi\"\"\nbye\",x", COMMA);
+
+    assert_eq!(*result, rows(&[&["say \"hi\"\nbye", "x"]]));
+}
+
+#[test]
+fn parse_text_falls_back_to_lines_when_a_quote_never_closes() {
+    let result = parse_text("\"a,b\nc,d\ne,f", COMMA);
+
+    assert_eq!(*result, rows(&[&["a,b"], &["c", "d"], &["e", "f"]]));
+}
+
+#[test]
+fn parse_text_splits_csv_like_lines_does_for_plain_text() {
+    let text = "a,b\n\nc,d\r\ne,f\n";
+
+    let result = parse_text(text, COMMA);
+
+    assert_eq!(*result, rows(&[&["a", "b"], &[""], &["c", "d"], &["e", "f"]]));
+    assert_eq!(parse_text("", COMMA).len(), 0);
+}
+
+#[test]
+fn csv_with_multi_line_fields_written_by_conv_data_reads_back_the_same() {
+    let data = rows(&[&["line one\nline two", "a,b"], &["x\r\ny", "say \"hi\""]]);
+    let text = conv_data(&data, "csv");
+
+    assert_eq!(*parse_text(&text, COMMA), data);
+}
+
+#[test]
+fn parse_text_keeps_csv_row_order_across_thread_chunks() {
+    let total = 450_000;
+    let text: Vec<String> = (0..total).map(|n| format!("{},\"x\ny\"", n)).collect();
+
+    let result = parse_text(&text.join("\n"), COMMA);
+
+    assert_eq!(result.len(), total);
+    assert!(result.iter().enumerate().all(|(n, row)| row[0] == n.to_string() && row[1] == "x\ny"));
 }
 
 #[test]

@@ -1,7 +1,7 @@
 use crate::formats::*;
 
 use regex::Regex;
-use std::{fs::File, io::{Read, Write}, iter::Peekable, str::Chars, thread};
+use std::{fs::File, io::{Read, Write}, thread};
 
 const EOL: &str = "\r\n";
 const QUOTE: char = '"';
@@ -36,45 +36,166 @@ pub fn write_file(file: &str, data: &str) -> Result<usize, String> {
     Ok(bytes.len())
 }
 
-fn read_quoted_char(c: char, chars: &mut Peekable<Chars>, field: &mut String) -> bool {
-    if c != QUOTE {
-        field.push(c);
-        return true;
+#[derive(PartialEq)]
+enum CsvEvent {
+    Open,
+    Close,
+    Escaped,
+    Delim,
+    Char,
+}
+
+struct CsvState {
+    in_quotes: bool,
+    at_start: bool,
+}
+
+impl CsvState {
+    fn new() -> Self {
+        CsvState { in_quotes: false, at_start: true }
     }
 
-    if chars.peek() == Some(&QUOTE) {
-        chars.next();
-        field.push(QUOTE);
-        return true;
+    fn next(&mut self, c: char, upcoming: Option<char>) -> CsvEvent {
+        if self.in_quotes {
+            return self.next_quoted(c, upcoming);
+        }
+
+        self.next_plain(c)
     }
 
-    false
+    fn next_quoted(&mut self, c: char, upcoming: Option<char>) -> CsvEvent {
+        if c != QUOTE {
+            return CsvEvent::Char;
+        }
+
+        if upcoming == Some(QUOTE) {
+            return CsvEvent::Escaped;
+        }
+
+        self.in_quotes = false;
+        CsvEvent::Close
+    }
+
+    fn next_plain(&mut self, c: char) -> CsvEvent {
+        if c == QUOTE && self.at_start {
+            self.in_quotes = true;
+            self.at_start = false;
+            return CsvEvent::Open;
+        }
+
+        if c == CSV_DELIM {
+            self.at_start = true;
+            return CsvEvent::Delim;
+        }
+
+        self.at_start = false;
+        CsvEvent::Char
+    }
 }
 
 fn parse_csv_line(line: &str) -> Vec<String> {
     let mut fields: Vec<String> = Vec::new();
     let mut field = String::new();
-    let mut in_quotes = false;
-    let mut at_start = true;
+    let mut state = CsvState::new();
     let mut chars = line.chars().peekable();
 
     while let Some(c) = chars.next() {
-        if in_quotes {
-            in_quotes = read_quoted_char(c, &mut chars, &mut field);
-        } else if c == QUOTE && at_start {
-            in_quotes = true;
-            at_start = false;
-        } else if c == CSV_DELIM {
-            fields.push(std::mem::take(&mut field));
-            at_start = true;
-        } else {
-            field.push(c);
-            at_start = false;
+        match state.next(c, chars.peek().copied()) {
+            CsvEvent::Open | CsvEvent::Close => {}
+            CsvEvent::Escaped => {
+                chars.next();
+                field.push(QUOTE);
+            }
+            CsvEvent::Delim => fields.push(std::mem::take(&mut field)),
+            CsvEvent::Char => field.push(c),
         }
     }
 
     fields.push(field);
     fields
+}
+
+struct Record {
+    start: usize,
+    end: usize,
+    next: usize,
+}
+
+struct Scan {
+    record: Record,
+    closed: bool,
+}
+
+fn scan_record(data: &str, start: usize) -> Scan {
+    let mut state = CsvState::new();
+    let mut chars = data[start..].char_indices().peekable();
+
+    while let Some((i, c)) = chars.next() {
+        let upcoming = chars.peek().map(|(_, ch)| *ch);
+
+        if state.next(c, upcoming) == CsvEvent::Escaped {
+            chars.next();
+        } else if c == '\n' && !state.in_quotes {
+            let record = Record { start, end: start + i, next: start + i + 1 };
+            return Scan { record, closed: true };
+        }
+    }
+
+    let record = Record { start, end: data.len(), next: data.len() };
+    Scan { record, closed: !state.in_quotes }
+}
+
+fn first_line_bounds(data: &str, start: usize) -> Record {
+    match data[start..].find('\n') {
+        Some(i) => Record { start, end: start + i, next: start + i + 1 },
+        None => Record { start, end: data.len(), next: data.len() },
+    }
+}
+
+fn next_record(data: &str, start: usize) -> Record {
+    let scan = scan_record(data, start);
+
+    if scan.closed {
+        return scan.record;
+    }
+
+    first_line_bounds(data, start)
+}
+
+fn trim_cr(text: &str) -> &str {
+    text.strip_suffix('\r').unwrap_or(text)
+}
+
+fn record_text(data: &str, record: &Record) -> String {
+    let text = &data[record.start..record.end];
+
+    if record.next > record.end {
+        return trim_cr(text).to_string();
+    }
+
+    text.to_string()
+}
+
+fn csv_records(data: &str) -> Vec<String> {
+    let mut records: Vec<String> = Vec::new();
+    let mut start = 0;
+
+    while start < data.len() {
+        let record = next_record(data, start);
+
+        records.push(record_text(data, &record));
+        start = record.next;
+    }
+
+    records
+}
+
+fn split_records(data: &str, delim: &str) -> Vec<String> {
+    if delim == COMMA {
+        return csv_records(data);
+    }
+
+    data.lines().map(|g| g.into()).collect()
 }
 
 pub fn parse_csv(lines: &Vec<String>) -> Box<Vec<Vec<String>>> {
@@ -101,7 +222,7 @@ fn run_thread(data: &Vec<String>, delim: &str) -> Box<Vec<Vec<String>>> {
 }
 
 pub fn parse_text(data: &str, delim: &str) -> Box<Vec<Vec<String>>> {
-    let lines: Vec<String> = data.lines().map(|g| g.into()).collect();
+    let lines: Vec<String> = split_records(data, delim);
     let chunks: Vec<Vec<String>> = lines.chunks(THSIZE).map(|m| m.into()).collect();
     let mut vec = vec![];
 
