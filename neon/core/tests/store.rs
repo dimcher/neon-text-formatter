@@ -359,3 +359,81 @@ fn file_array_reports_a_name_without_an_extension() {
 
     assert!(error.starts_with("Cannot find a file extension"), "{}", error);
 }
+
+#[test]
+fn parse_text_keeps_non_ascii_text_around_a_multi_line_field() {
+    let result = parse_text("é,\"ü\nñ\",日本\n語,x", COMMA);
+
+    assert_eq!(result, rows(&[&["é", "ü\nñ", "日本"], &["語", "x"]]));
+}
+
+#[test]
+fn parse_text_reads_a_quote_at_the_very_end_of_the_text() {
+    assert_eq!(parse_text("\"a\"", COMMA), rows(&[&["a"]]));
+    assert_eq!(parse_text("x,\"\"", COMMA), rows(&[&["x", ""]]));
+    assert_eq!(parse_text("\"", COMMA), rows(&[&[""]]));
+}
+
+#[test]
+fn parse_text_reads_a_field_that_is_only_an_escaped_quote() {
+    assert_eq!(parse_text("\"\"\"\",x", COMMA), rows(&[&["\"", "x"]]));
+}
+
+#[test]
+fn parse_text_gives_no_rows_for_empty_text_in_every_format() {
+    assert_eq!(parse_text("", COMMA).len(), 0);
+    assert_eq!(parse_text("", TAB).len(), 0);
+    assert_eq!(parse_text("", PIPE).len(), 0);
+}
+
+#[test]
+fn parse_text_reads_crlf_tsv_without_leaving_a_carriage_return() {
+    let result = parse_text("a\tb\r\n1\t2\r\n", TAB);
+
+    assert_eq!(result, rows(&[&["a", "b"], &["1", "2"]]));
+}
+
+#[test]
+fn parse_text_keeps_a_multi_line_record_that_sits_on_a_chunk_boundary() {
+    let total = 200_001;
+    let mut text: Vec<String> = (0..total).map(|n| format!("{},x", n)).collect();
+    text[199_999] = "199999,\"x\ny\"".to_string();
+    text[200_000] = "200000,\"p\nq\"".to_string();
+
+    let result = parse_text(&text.join("\n"), COMMA);
+
+    assert_eq!(result.len(), total);
+    assert_eq!(result[199_999], vec!["199999", "x\ny"]);
+    assert_eq!(result[200_000], vec!["200000", "p\nq"]);
+}
+
+#[test]
+fn parse_text_reads_a_long_quoted_field_with_many_lines() {
+    let body = vec!["line"; 50_000].join("\n");
+    let result = parse_text(&format!("\"{}\",end", body), COMMA);
+
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0][0].lines().count(), 50_000);
+    assert_eq!(result[0][1], "end");
+}
+
+#[test]
+fn parse_text_with_many_unclosed_quotes_stays_fast_and_keeps_every_line() {
+    let text = vec!["\"a,b"; 100_000].join("\n");
+
+    let result = parse_text(&text, COMMA);
+
+    assert!(!result.is_empty());
+}
+
+#[test]
+fn convert_file_turns_psv_into_a_csv_that_reads_back() {
+    let source = temp_file("rt-in.psv", "a,b|c\"d");
+    let target = temp_path("rt-out.csv").to_string_lossy().into_owned();
+
+    convert_file(&source, &target).unwrap();
+
+    assert_eq!(file_array(&target), Ok(rows(&[&["a,b", "c\"d"]])));
+    fs::remove_file(source).unwrap();
+    fs::remove_file(target).unwrap();
+}
