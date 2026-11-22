@@ -1,32 +1,46 @@
-use std::collections::HashMap;
+use crate::io::file_type;
 
 pub const TAB: &str = "\t";
 pub const PIPE: &str = "|";
 pub const COMMA: &str = ",";
 
-pub struct FileFormats {
-    map: HashMap<&'static str, &'static str>,
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Format {
+    Csv,
+    Tsv,
+    Psv,
 }
 
-impl FileFormats {
-    pub fn new() -> Self {
-        Self {
-            map: HashMap::from([
-                ("tsv", TAB),
-                ("psv", PIPE),
-                ("csv", COMMA),
-            ])
+impl Format {
+    pub fn all() -> [Format; 3] {
+        [Format::Csv, Format::Tsv, Format::Psv]
+    }
 
+    pub fn ext(self) -> &'static str {
+        match self {
+            Format::Csv => "csv",
+            Format::Tsv => "tsv",
+            Format::Psv => "psv",
         }
     }
 
-    pub fn get_map (&self) -> &HashMap<&'static str, &'static str> {
-        &self.map
+    pub fn delim(self) -> &'static str {
+        match self {
+            Format::Csv => COMMA,
+            Format::Tsv => TAB,
+            Format::Psv => PIPE,
+        }
     }
 
-    #[allow(dead_code)]
-    pub fn get_delim<'a>(&self, mode: &str) -> &str {
-        let map = self.get_map();
-        map.get(mode).unwrap_or(&COMMA)
+    pub fn from_ext(ext: &str) -> Result<Format, String> {
+        Format::all()
+            .iter()
+            .copied()
+            .find(|format| format.ext().eq_ignore_ascii_case(ext))
+            .ok_or_else(|| format!("Unsupported file type '{}'. Use csv, tsv or psv", ext))
+    }
+
+    pub fn from_path(path: &str) -> Result<Format, String> {
+        Format::from_ext(file_type(path)?)
     }
 }
