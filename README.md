@@ -2,7 +2,7 @@
 
 ![license](https://img.shields.io/badge/license-MIT-blue) ![node](https://img.shields.io/badge/node-%3E%3D16-339933) ![rust](https://img.shields.io/badge/built%20with-Rust%20%2B%20Neon-b7410e) ![tests](https://img.shields.io/badge/tests-Rust%20%2B%20jest-brightgreen)
 
-Read and convert CSV, TSV and PSV (pipe separated) text from Node. The parsing is done by a Rust addon built with [Neon](https://neon-bindings.com), and it keeps the quote rules and error messages the same for every format. Where it helps most is converting: `convFile` is about 1.5 times faster than reading and writing with a pure-JS parser (see [Performance](#performance)).
+Read and convert CSV, TSV and PSV (pipe separated) text from Node. The parsing is done by a Rust addon built with [Neon](https://neon-bindings.com), and it keeps the quote rules and error messages the same for every format. Where it helps most is converting: `convFile` is about 5 times faster than reading and writing with a pure-JS parser (see [Performance](#performance)).
 
 **Docs:** [Format guide](https://github.com/dimcher/neon-text-formatter/blob/master/docs/formats.md) · [Architecture](https://github.com/dimcher/neon-text-formatter/blob/master/docs/architecture.md) · [Testing](https://github.com/dimcher/neon-text-formatter/blob/master/docs/testing.md) · [Troubleshooting](https://github.com/dimcher/neon-text-formatter/blob/master/docs/troubleshooting.md) · [Contributing](https://github.com/dimcher/neon-text-formatter/blob/master/docs/contributing.md) · [Changelog](https://github.com/dimcher/neon-text-formatter/blob/master/CHANGELOG.md)
 
@@ -149,11 +149,11 @@ Measured on a 12-core laptop, 2 million rows of 5 columns with commas, doubled q
 
 | Approach | Time |
 |---|---|
-| **this addon, `convFile`** | **1.65 s** |
+| **this addon, `convFile`** | **0.46 s** |
 | uDSV read + join and write | 2.46 s |
 | d3-dsv parse + `tsvFormatRows` | 2.80 s |
 
-Plain reading is not faster than the best JS parsers. About 78% of a read goes to building JS strings and arrays, which every Node addon pays, and only about 14% to parsing in Rust. Converting keeps the data in Rust, so it wins there. uDSV and d3-dsv returned the same rows as the addon on the read file.
+Plain reading is not faster than the best JS parsers. About 78% of a read goes to building JS strings and arrays, which every Node addon pays, and only about 14% to parsing in Rust. Converting keeps the data in Rust, and the output is written on several threads, so it wins there by a wide margin. The addon output was byte-identical to the JS reference for CSV, TSV and PSV on this file. uDSV and d3-dsv returned the same rows as the addon on the read file.
 
 ## Project layout
 

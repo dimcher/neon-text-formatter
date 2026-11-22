@@ -495,3 +495,41 @@ fn parse_text_sized_matches_the_single_chunk_result() {
 
     assert_eq!(parse_text_sized(&text, ",", 7), parse_text_sized(&text, ",", 100000));
 }
+
+fn sample_rows(count: usize) -> Vec<Vec<String>> {
+    (0..count)
+        .map(|n| vec![format!("a\"{n}"), format!("line\r\nbreak\r{n}\n"), String::new(), format!("p|q\t{n}")])
+        .collect()
+}
+
+#[test]
+fn conv_data_sized_gives_the_same_text_for_any_chunk_size() {
+    let rows = sample_rows(500);
+
+    for format in Format::all() {
+        let whole = conv_data_sized(&rows, format, 100000);
+
+        assert_eq!(conv_data_sized(&rows, format, 7), whole);
+        assert_eq!(conv_data_sized(&rows, format, 499), whole);
+    }
+}
+
+#[test]
+fn conv_data_flattens_line_breaks_and_delimiters_for_tsv_and_psv() {
+    let rows = vec![vec!["a\r\nb\rc\nd".to_string(), "x|y\tz".to_string()]];
+
+    assert_eq!(conv_data(&rows, Format::Tsv), "a b c d\tx|y z");
+    assert_eq!(conv_data(&rows, Format::Psv), "a b c d|x y\tz");
+}
+
+#[test]
+fn conv_data_quotes_every_csv_cell_and_doubles_quotes() {
+    let rows = vec![vec!["say \"hi\"".to_string(), String::new()], vec![]];
+
+    assert_eq!(conv_data(&rows, Format::Csv), "\"say \"\"hi\"\"\",\"\"\r\n");
+}
+
+#[test]
+fn conv_data_of_no_rows_is_empty() {
+    assert_eq!(conv_data(&[], Format::Csv), "");
+}

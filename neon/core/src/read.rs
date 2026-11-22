@@ -29,7 +29,7 @@ fn run_thread(lines: &[String], delim: &str) -> Vec<Vec<String>> {
     parse_data(lines, delim)
 }
 
-fn worker_count() -> usize {
+pub(crate) fn worker_count() -> usize {
     thread::available_parallelism().map_or(1, |count| count.get())
 }
 
