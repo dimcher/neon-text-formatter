@@ -1,0 +1,64 @@
+name: Review bot
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '**/*.rs'
+      - '**/*.js'
+      - '**/*.mjs'
+      - '**/*.ts'
+      - '**/Cargo.toml'
+      - '**/package.json'
+      - '.github/workflows/**'
+      - '!**/target/**'
+      - '!**/node_modules/**'
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+
+jobs:
+  review:
+    if: >-
+      (github.event_name == 'pull_request' && !github.event.pull_request.draft) ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+       contains(github.event.comment.body, format('@{0}', vars.REVIEW_BOT_NAME || 'Reviewer')) &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+    concurrency:
+      group: review-bot-${{ github.event.pull_request.number || github.event.issue.number }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BOT_API_KEY: ${{ secrets.REVIEW_BOT_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.REVIEW_BOT_GEMINI_KEY }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Review
+        if: (env.BOT_API_KEY != '' || env.GEMINI_API_KEY != '') && hashFiles('scripts/review-bot.mjs') != ''
+        run: node scripts/review-bot.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BOT_NAME: ${{ vars.REVIEW_BOT_NAME || 'Reviewer' }}
+          BOT_API_URL: ${{ vars.REVIEW_BOT_API_URL }}
+          BOT_MODELS: ${{ vars.REVIEW_BOT_MODELS }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number || github.event.issue.number }}
+          EVENT_NAME: ${{ github.event_name }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          FORCE: ${{ github.event_name == 'issue_comment' && '1' || '' }}
+
+      - name: No key yet
+        if: env.BOT_API_KEY == '' && env.GEMINI_API_KEY == ''
+        run: echo "::notice::Add the REVIEW_BOT_API_KEY (OpenRouter) or REVIEW_BOT_GEMINI_KEY secret to turn the review bot on."
